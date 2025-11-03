@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:project/components/top_picks.dart';
+import 'package:project/components/upcoming.dart';
 import 'package:intl/intl.dart';
 
 class Home extends StatefulWidget {
