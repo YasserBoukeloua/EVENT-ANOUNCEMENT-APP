@@ -47,31 +47,36 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       title: 'Technology\nEvent',
       location: 'ensia, Algiers',
       date: '12 Nov. 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400',
+      imageUrl:
+          'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400',
     ),
     Event(
       title: 'Workshop of\nMobile',
       location: 'ensia, Algiers',
       date: '12 Nov. 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400',
+      imageUrl:
+          'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400',
     ),
     Event(
       title: 'Workshop of\nMobile',
       location: 'ensia, Algiers',
       date: '12 Nov. 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400',
+      imageUrl:
+          'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400',
     ),
     Event(
       title: 'Workshop of\nMobile',
       location: 'ensia, Algiers',
       date: '12 Nov. 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400',
+      imageUrl:
+          'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400',
     ),
     Event(
       title: 'Workshop of\nMobile',
       location: 'ensia, Algiers',
       date: '12 Nov. 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400',
+      imageUrl:
+          'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400',
     ),
   ];
 
@@ -96,7 +101,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
               ),
             ),
-            
+
             // Events List
             Expanded(
               child: Container(
@@ -119,7 +124,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ],
         ),
       ),
-      
+
       // Bottom Navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.all(16),
@@ -157,11 +162,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           color: isSelected ? const Color(0xFF6C5CE7) : Colors.transparent,
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: Icon(icon, color: Colors.white, size: 28),
       ),
     );
   }
@@ -201,9 +202,9 @@ class EventCard extends StatelessWidget {
               },
             ),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           // Event Info
           Expanded(
             child: Column(
@@ -247,9 +248,9 @@ class EventCard extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Favorite Button
           Container(
             padding: const EdgeInsets.all(8),
@@ -257,13 +258,10 @@ class EventCard extends StatelessWidget {
               color: Color(0xFF6C5CE7),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.star,
-              color: Colors.white,
-              size: 24,
-            ),
+            child: const Icon(Icons.star, color: Colors.white, size: 24),
           ),
         ],
       ),
     );
   }
+}

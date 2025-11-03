@@ -1,7 +1,8 @@
+import 'package:eventify/components/top_picks.dart';
+import 'package:eventify/screens/favorite/favorite_screen.dart';
+import 'package:eventify/screens/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:project/components/top_picks.dart';
-import 'package:project/components/upcoming.dart';
 import 'package:intl/intl.dart';
 
 class Home extends StatefulWidget {
@@ -130,7 +131,7 @@ class _HomeState extends State<Home> {
                   children: [
                     Row(
                       children: [
-                        for (int i = 0; i < upComing.length; i++)
+                        for (int i = 0; i < topPicks.length; i++)
                           ElevatedButton(
                             onPressed: () {},
                             style: ElevatedButton.styleFrom(
@@ -143,7 +144,7 @@ class _HomeState extends State<Home> {
                               margin: EdgeInsets.only(
                                 left: 15,
                                 top: 15,
-                                right: (i == upComing.length - 1) ? 15 : 0,
+                                right: (i == topPicks.length - 1) ? 15 : 0,
                               ),
                               padding: EdgeInsets.all(10),
                               decoration: BoxDecoration(
@@ -156,7 +157,7 @@ class _HomeState extends State<Home> {
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(25),
                                     child: Image.asset(
-                                      upComing[i].pathToImg!,
+                                      topPicks[i].pathToImg!,
                                       height: 90,
                                       width: 67,
                                       fit: BoxFit.cover,
@@ -175,7 +176,7 @@ class _HomeState extends State<Home> {
                                           Text(
                                             DateFormat(
                                               'dd/MM/yyyy',
-                                            ).format(upComing[i].date!),
+                                            ).format(topPicks[i].date!),
                                             style: TextStyle(
                                               color: Color.fromRGBO(
                                                 103,
@@ -188,7 +189,7 @@ class _HomeState extends State<Home> {
                                             ),
                                           ),
                                           Text(
-                                            upComing[i].nameOfevent!,
+                                            topPicks[i].nameOfevent!,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
@@ -212,7 +213,7 @@ class _HomeState extends State<Home> {
                                               SizedBox(width: 2),
                                               Expanded(
                                                 child: Text(
-                                                  upComing[i].location!,
+                                                  topPicks[i].location!,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
@@ -539,18 +540,66 @@ class _HomeState extends State<Home> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Icon(Icons.home_outlined, size: 30, color: Colors.white),
-                    Icon(Icons.calendar_today, size: 25, color: Colors.white),
-                    Icon(
-                      Icons.star_border_outlined,
-                      size: 30,
-                      color: Colors.white,
-                    ),
-                    Icon(
-                      Icons.person_outline_outlined,
-                      size: 30,
-                      color: Colors.white,
-                    ),
+                    ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Home()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  overlayColor: Colors.transparent,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                ),
+                child: const Icon(Icons.home_outlined, size: 30, color: Colors.white),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(builder: (context) => const CalendarScreen()),
+                  // );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  overlayColor: Colors.transparent,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                ),
+                child: const Icon(Icons.calendar_today, size: 25, color: Colors.white),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FavoritesScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  overlayColor: Colors.transparent,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                ),
+                child: const Icon(Icons.star_border_outlined, size: 30, color: Colors.white),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  overlayColor: Colors.transparent,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                ),
+                child: const Icon(Icons.person_outline_outlined, size: 30, color: Colors.white),
+              ),
                   ],
                 ),
               ),
