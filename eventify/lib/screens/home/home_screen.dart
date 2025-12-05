@@ -1,7 +1,8 @@
-import 'package:eventify/components/top_picks.dart';
-import 'package:eventify/screens/favorite/favorite_screen.dart';
-import 'package:eventify/screens/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:eventify/screens/events_list_screen.dart';
+import 'package:eventify/screens/photo_carousel.dart';
+import 'package:eventify/models/event_model.dart';
+import 'package:eventify/services/api_service.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 
@@ -14,6 +15,36 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   String username = 'Mustapha';
+  final ApiService _apiService = ApiService();
+  List<Event> events = [];
+  bool isLoading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchEvents();
+  }
+
+  Future<void> fetchEvents() async {
+    try {
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
+
+      final data = await _apiService.getEvents();
+      setState(() {
+        events = data.map<Event>((json) => Event.fromJson(json)).toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +162,7 @@ class _HomeState extends State<Home> {
                   children: [
                     Row(
                       children: [
-                        for (int i = 0; i < topPicks.length; i++)
+                        for (int i = 0; i < events.length; i++)
                           ElevatedButton(
                             onPressed: () {},
                             style: ElevatedButton.styleFrom(
@@ -144,7 +175,7 @@ class _HomeState extends State<Home> {
                               margin: EdgeInsets.only(
                                 left: 15,
                                 top: 15,
-                                right: (i == topPicks.length - 1) ? 15 : 0,
+                                right: (i == events.length - 1) ? 15 : 0,
                               ),
                               padding: EdgeInsets.all(10),
                               decoration: BoxDecoration(
@@ -156,12 +187,28 @@ class _HomeState extends State<Home> {
                                 children: [
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(25),
-                                    child: Image.asset(
-                                      topPicks[i].pathToImg!,
-                                      height: 90,
-                                      width: 67,
-                                      fit: BoxFit.cover,
-                                    ),
+                                    child: events[i].hasPhotos
+                                        ? Image.network(
+                                            events[i].firstPhotoUrl,
+                                            height: 90,
+                                            width: 67,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                                  height: 90,
+                                                  width: 67,
+                                                  color: Colors.grey[300],
+                                                  child: const Icon(
+                                                    Icons.image,
+                                                  ),
+                                                ),
+                                          )
+                                        : Container(
+                                            height: 90,
+                                            width: 67,
+                                            color: Colors.grey[300],
+                                            child: const Icon(Icons.image),
+                                          ),
                                   ),
                                   SizedBox(width: 8),
                                   Expanded(
@@ -174,9 +221,7 @@ class _HomeState extends State<Home> {
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            DateFormat(
-                                              'dd/MM/yyyy',
-                                            ).format(topPicks[i].date!),
+                                            '${events[i].date}',
                                             style: TextStyle(
                                               color: Color.fromRGBO(
                                                 103,
@@ -189,7 +234,7 @@ class _HomeState extends State<Home> {
                                             ),
                                           ),
                                           Text(
-                                            topPicks[i].nameOfevent!,
+                                            events[i].location,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
@@ -213,7 +258,7 @@ class _HomeState extends State<Home> {
                                               SizedBox(width: 2),
                                               Expanded(
                                                 child: Text(
-                                                  topPicks[i].location!,
+                                                  events[i].location,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
@@ -392,7 +437,7 @@ class _HomeState extends State<Home> {
               SingleChildScrollView(
                 child: Column(
                   children: [
-                    for (int i = 0; i < topPicks.length; i++)
+                    for (int i = 0; i < events.length; i++)
                       ElevatedButton(
                         onPressed: () {},
                         style: ElevatedButton.styleFrom(
@@ -404,12 +449,12 @@ class _HomeState extends State<Home> {
                         ),
                         child: Container(
                           width: double.infinity,
-                          height: 220,
+                          height: 260,
                           margin: EdgeInsets.only(
                             top: 15,
                             left: 15,
                             right: 15,
-                            bottom: (i == topPicks.length - 1) ? 70 : 0,
+                            bottom: (i == events.length - 1) ? 70 : 0,
                           ),
                           padding: EdgeInsets.only(left: 8, right: 8, top: 8),
                           decoration: BoxDecoration(
@@ -418,14 +463,9 @@ class _HomeState extends State<Home> {
                           ),
                           child: Column(
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(15),
-                                child: Image.asset(
-                                  topPicks[i].pathToImg!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
+                              PhotoCarousel(
+                                photos: events[i].photos,
+                                baseUrl: ApiService.baseUrl,
                               ),
 
                               Padding(
@@ -443,7 +483,7 @@ class _HomeState extends State<Home> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          topPicks[i].nameOfevent!,
+                                          events[i].title,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
@@ -454,9 +494,7 @@ class _HomeState extends State<Home> {
                                         ),
                                         SizedBox(width: 4),
                                         Text(
-                                          DateFormat(
-                                            'dd MMM. yyyy',
-                                          ).format(topPicks[i].date!),
+                                          '${events[i].date}',
                                           style: TextStyle(
                                             color: Color.fromRGBO(
                                               103,
@@ -484,7 +522,7 @@ class _HomeState extends State<Home> {
                                         ),
                                         SizedBox(width: 4),
                                         Text(
-                                          topPicks[i].location!,
+                                          events[i].location!,
                                           style: TextStyle(
                                             color: Color.fromRGBO(
                                               103,
@@ -512,8 +550,6 @@ class _HomeState extends State<Home> {
           ),
         ),
       ),
-
-      
     );
   }
 }

@@ -56,15 +56,20 @@ def getRoutes(request):
 
 @api_view(['GET'])
 def getEvents(request):
-    events = Event.objects.all()
-    serializer = EventSerializer(events, many=True)
+    events = Event.objects.all().order_by('-created_at')
+    # Pass request to serializer so it can build absolute URIs
+    serializer = EventSerializer(events, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['GET'])
-def getEvent(request , pk):
-    event = Event.objects.get(id=pk)
-    serializer = EventSerializer(event, many=False)
-    return Response(serializer.data)
+def getEvent(request, pk):
+    try:
+        event = Event.objects.get(id=pk)
+        serializer = EventSerializer(event, context={'request': request})
+        return Response(serializer.data)
+    except Event.DoesNotExist:
+        return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['POST'])
 def createEvent(request):
@@ -393,20 +398,20 @@ def deleteFavorite(request, pk):
 #Photos Views
 
 @api_view(['GET'])
-def getPhotos(request):
-    photos = Photo.objects.all().order_by('-uploaded_at')
-    serializer = PhotoSerializer(photos, many=True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
 def getPhoto(request, pk):
     try:
         photo = Photo.objects.get(id=pk)
-        serializer = PhotoSerializer(photo, many=False)
+        # Pass request context to serializer
+        serializer = PhotoSerializer(photo, many=False, context={'request': request})
         return Response(serializer.data)
     except Photo.DoesNotExist:
         return Response({'error': 'Photo not found'}, status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['GET'])
+def getPhotos(request):
+    photos = Photo.objects.all()
+    serializer = PhotoSerializer(photos, many=True, context={'request': request})
+    return Response(serializer.data)
 
 @api_view(['POST'])
 def createPhoto(request):

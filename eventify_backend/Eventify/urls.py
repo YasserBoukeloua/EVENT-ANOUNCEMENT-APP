@@ -10,3 +10,5 @@ urlpatterns = [
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+print(f"Media files will be served from: {settings.MEDIA_ROOT}")
+print(f"Media URL pattern: {settings.MEDIA_URL}")

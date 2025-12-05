@@ -1,10 +1,11 @@
+// lib/models/event_model.dart
 import 'user_model.dart';
 import 'package:eventify/services/api_service.dart';
 
 class Photo {
   final int id;
   final String contentType;
-  final String image;
+  final String image; // This will be the full URL from Django
   final String uploadedAt;
   final int? eventId;
   final int? postId;
@@ -22,17 +23,20 @@ class Photo {
     return Photo(
       id: json['id'],
       contentType: json['content_type'],
-      image: json['image'],
+      image: json['image'], // Django serializer returns full URL
       uploadedAt: json['uploaded_at'],
       eventId: json['event'],
       postId: json['post'],
     );
   }
-
   String getFullImageUrl(String baseUrl) {
-    // Remove /api from baseUrl and append the image path
-    final cleanBaseUrl = baseUrl.replaceAll('/', '');
-    return '$cleanBaseUrl$image';
+    if (image.startsWith('http')) {
+      return image;
+    }
+    if (!baseUrl.endsWith('/') && !image.startsWith('/')) {
+      return '$baseUrl/$image';
+    }
+    return '$baseUrl$image';
   }
 }
 

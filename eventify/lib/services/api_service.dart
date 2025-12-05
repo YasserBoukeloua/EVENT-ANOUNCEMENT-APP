@@ -26,7 +26,6 @@ class ApiService {
     }
   }
 
-  // POST request helper
   Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
     try {
       final response = await http.post(
@@ -47,7 +46,6 @@ class ApiService {
     }
   }
 
-  // Fetch all users
   Future<List<dynamic>> getUsers() async {
     return await get('/users/');
   }
