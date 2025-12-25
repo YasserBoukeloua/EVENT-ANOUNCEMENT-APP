@@ -27,7 +27,9 @@ class User {
       name: json['name'] ?? '',
       lastname: json['lastname'] ?? '',
       dateOfBirth: json['date_of_birth'],
-      isCertified: json['is_certified'],
+      isCertified: json['is_certified'] is int 
+          ? json['is_certified'] == 1 
+          : json['is_certified'],
       photo: json['photo'],
     );
   }
