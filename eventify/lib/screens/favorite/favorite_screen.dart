@@ -6,6 +6,7 @@ import 'package:eventify/screens/post_details/post_details_screen.dart';
 import 'package:eventify/components/top_picks.dart';
 import 'package:eventify/cubits/favorites/favorites_cubit.dart';
 import 'package:eventify/cubits/favorites/favorites_state.dart';
+import 'package:eventify/screens/profile/visible_profile.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({Key? key}) : super(key: key);
@@ -226,6 +227,36 @@ class EventCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Creator Info
+                      GestureDetector(
+                        onTap: () {
+                          final publisher = event.publisher;
+                          if (publisher != null && publisher.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => VisibleProfilePage(username: publisher),
+                              ),
+                            );
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person, size: 14, color: AppColors.primaryDark),
+                            const SizedBox(width: 4),
+                            Text(
+                              event.publisher ?? 'Unknown',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                                fontFamily: 'JosefinSans',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
                       Text(
                         event.nameOfevent ?? 'Event',
                         style: const TextStyle(

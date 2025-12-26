@@ -84,7 +84,18 @@ class _LoginScreenContentState extends State<LoginScreenContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
+                    // Back button
+                    IconButton(
+                      onPressed: () => Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HomeApp()),
+                        (route) => false,
+                      ),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    const SizedBox(height: 20),
                     // Logo/App Name
                     Center(
                       child: Column(

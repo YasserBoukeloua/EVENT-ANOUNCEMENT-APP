@@ -44,6 +44,17 @@ class ProfileRepository {
     return _currentUser;
   }
 
+  Future<User?> updateProfilePicture(String path) async {
+    final userId = await SessionService.getUserId();
+    if (userId == null) return null;
+
+    final success = await _userRepository.updateUser(userId, {'photo': path});
+    if (success) {
+      return await getProfile();
+    }
+    return _currentUser;
+  }
+
   void clearUser() {
     _currentUser = null;
   }

@@ -2,6 +2,7 @@ import 'package:eventify/components/top_picks.dart';
 import 'package:eventify/localization/app_language.dart';
 import 'package:eventify/screens/post_details/post_details_screen.dart';
 import 'package:eventify/screens/profile/profile_screen.dart';
+import 'package:eventify/screens/login/login_screen.dart';
 import 'package:eventify/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,7 @@ import 'package:eventify/cubits/profile/profile_cubit.dart';
 import 'package:eventify/cubits/profile/profile_state.dart';
 import 'package:eventify/cubits/events/events_cubit.dart';
 import 'package:eventify/cubits/events/events_state.dart';
+import 'package:eventify/screens/profile/visible_profile.dart';
 
 class Home extends StatefulWidget {
   final Function(int)? onTabChange;
@@ -166,6 +168,7 @@ class _HomeState extends State<Home> {
                               Flexible(
                                 child: BlocBuilder<ProfileCubit, ProfileState>(
                                   builder: (context, state) {
+                                    final isAuthenticated = state.user != null;
                                     String displayName = 'User';
                                     
                                     if (state.user != null) {
@@ -178,7 +181,9 @@ class _HomeState extends State<Home> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "${AppLanguage.t('home_hello_prefix')} $displayName",
+                                          isAuthenticated 
+                                              ? "${AppLanguage.t('home_hello_prefix')} $displayName"
+                                              : "Eventify",
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w900,
@@ -202,25 +207,40 @@ class _HomeState extends State<Home> {
                                   },
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  // Switch to profile tab instead of navigating
-                                  widget.onTabChange?.call(2);
+                              BlocBuilder<ProfileCubit, ProfileState>(
+                                builder: (context, profileState) {
+                                  final isAuthenticated = profileState.user != null;
+                                  
+                                  return GestureDetector(
+                                    onTap: () {
+                                      if (isAuthenticated) {
+                                        // Authenticated user - go to profile tab (index 3)
+                                        widget.onTabChange?.call(3);
+                                      } else {
+                                        // Guest user - redirect to login screen
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(width: 3, color: Colors.white),
+                                      ),
+                                      child: Icon(
+                                        isAuthenticated 
+                                            ? Icons.person_outline_outlined
+                                            : Icons.login,
+                                        color: Colors.white,
+                                        size: 35,
+                                      ),
+                                    ),
+                                  );
                                 },
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(30),
-                                    border:
-                                        Border.all(width: 3, color: Colors.white),
-                                  ),
-                                  child: const Icon(
-                                    Icons.person_outline_outlined,
-                                    color: Colors.white,
-                                    size: 35,
-                                  ),
-                                ),
                               ),
                             ],
                           ),
@@ -305,7 +325,7 @@ class _HomeState extends State<Home> {
 
                   // Horizontal Scrolling Events
                   SizedBox(
-                    height: 130,
+                    height: 145,
                     child: allEvents.isEmpty
                         ? const Center(child: Text('No events available'))
                         : ListView.builder(
@@ -520,6 +540,36 @@ class _HomeState extends State<Home> {
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
+                                                // Creator Info
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    final publisher = event.publisher;
+                                                    if (publisher != null && publisher.isNotEmpty) {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) => VisibleProfilePage(username: publisher),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(Icons.person, size: 14, color: AppColors.primaryDark),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        event.publisher ?? 'Unknown',
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: AppColors.primaryDark,
+                                                          fontFamily: 'JosefinSans',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
                                                 Text(
                                                   event.nameOfevent ?? 'Event',
                                                   maxLines: 1,

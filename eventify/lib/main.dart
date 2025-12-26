@@ -5,8 +5,10 @@ import 'package:eventify/data/repo/repost/repost_repository.dart';
 import 'package:eventify/screens/home/home_screen.dart';
 import 'package:eventify/screens/favorite/favorite_screen.dart';
 import 'package:eventify/screens/profile/profile_screen.dart';
+import 'package:eventify/screens/profile/verified_profile_screen.dart';
 import 'package:eventify/screens/login/login_screen.dart';
 import 'package:eventify/screens/repost/repost_screen.dart';
+import 'package:eventify/screens/login/login_prompt_screen.dart';
 import 'package:eventify/screens/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,51 +29,39 @@ import 'package:eventify/repositories/reposts_repository.dart';
 import 'package:eventify/cubits/events/events_cubit.dart';
 import 'package:eventify/cubits/favorites/favorites_cubit.dart';
 import 'package:eventify/cubits/profile/profile_cubit.dart';
+import 'package:eventify/cubits/profile/profile_state.dart';
+import 'package:eventify/cubits/settings/settings_cubit.dart';
 import 'package:eventify/cubits/navigation/navigation_cubit.dart';
 import 'package:eventify/cubits/navigation/navigation_state.dart';
-import 'package:eventify/cubits/settings/settings_cubit.dart';
 
-// Import database
-import 'package:eventify/data/databases/dbhelper.dart';
-import 'package:eventify/data/databases/database_seeder.dart';
+import 'package:eventify/data/database_seeder.dart';
 
-Future<void> initializeApp() async {
-  // Initialize sqflite for desktop platforms
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   if (Platform.isWindows || Platform.isLinux) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // Initialize database
-  await DBHelper.getDatabase();
-  
-  // Seed database with initial data
-  await DatabaseSeeder.seedDatabase();
-}
+  // Seed database with test data
+  await DatabaseSeeder().seedDatabase();
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize app and database
-  await initializeApp();
-
-  // Set status bar color to purple with white icons
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: AppColors.primaryDark,
       statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
     ),
   );
-  runApp(const MainApp());
+
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Initialize repositories
     final authRepository = AuthRepository();
     final eventsRepository = EventsRepository();
     final favoriteRepository = FavoriteRepository();
@@ -90,7 +80,7 @@ class MainApp extends StatelessWidget {
           create: (context) => FavoritesCubit(favoritesRepository)..loadFavorites(),
         ),
         BlocProvider<ProfileCubit>(
-          create: (context) => ProfileCubit(profileRepository, authRepository)..loadProfile(),
+          create: (context) => ProfileCubit(profileRepository, authRepository),
         ),
         BlocProvider<SettingsCubit>(
           create: (context) => SettingsCubit(),
@@ -128,9 +118,9 @@ class HomeAppContent extends StatelessWidget {
   List<Widget> _buildPages(BuildContext context, Function(int) onTabChange) {
     return [
       Home(onTabChange: onTabChange),
-      const RepostScreen(),
       const FavoritesScreen(),
-      const ProfilePage(),
+      const RepostScreen(),
+      const ProfileWrapper(),
     ];
   }
 
@@ -184,7 +174,7 @@ class HomeAppContent extends StatelessWidget {
                         IconButton(
                           onPressed: () => onItemTapped(1),
                           icon: const Icon(
-                            Icons.repeat,
+                            Icons.star_border_outlined,
                             size: 26,
                             color: Colors.white,
                           ),
@@ -192,7 +182,7 @@ class HomeAppContent extends StatelessWidget {
                         IconButton(
                           onPressed: () => onItemTapped(2),
                           icon: const Icon(
-                            Icons.star_border_outlined,
+                            Icons.repeat,
                             size: 26,
                             color: Colors.white,
                           ),
@@ -218,3 +208,29 @@ class HomeAppContent extends StatelessWidget {
   }
 }
 
+// Profile wrapper that shows different screens based on verification status
+class ProfileWrapper extends StatelessWidget {
+  const ProfileWrapper({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) {
+        final user = state.user;
+        
+        // If user is not logged in, show login prompt
+        if (user == null) {
+          return const LoginPromptScreen(
+            featureName: 'Profile',
+            description: 'Please log in or sign up to access your profile',
+          );
+        }
+
+        final isVerified = user.isCertified == true;
+
+        // Show VerifiedProfilePage for verified users, ProfilePage for unverified users
+        return isVerified ? const VerifiedProfilePage() : const ProfilePage();
+      },
+    );
+  }
+}

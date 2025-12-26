@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eventify/constants/app_colors.dart';
-import 'package:eventify/screens/login/login_screen.dart';
+import 'package:eventify/main.dart';
 import 'dart:async';
 
 class SplashScreen extends StatefulWidget {
@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   void _navigateToLogin() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
+        builder: (context) => const HomeApp(),
       ),
     );
   }

@@ -3,6 +3,10 @@ import 'package:eventify/constants/app_colors.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:eventify/localization/app_language.dart';
 import 'package:eventify/screens/settings/help_support_screen.dart';
+import 'package:eventify/screens/settings/verification_details_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:eventify/cubits/profile/profile_cubit.dart';
+import 'package:eventify/screens/login/login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -118,6 +122,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text(
               'Close',
               style: TextStyle(color: AppColors.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          AppLanguage.t('profile_logout_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'JosefinSans'),
+        ),
+        content: Text(AppLanguage.t('profile_logout_confirm'), style: const TextStyle(fontFamily: 'JosefinSans')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              AppLanguage.t('profile_cancel'),
+              style: TextStyle(color: Colors.grey, fontFamily: 'JosefinSans'),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              
+              // Logout via Cubit
+              context.read<ProfileCubit>().logout();
+
+              // Navigate back to login screen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
+              );
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(AppLanguage.t('profile_logout_success'), style: const TextStyle(fontFamily: 'JosefinSans')),
+                  backgroundColor: AppColors.accentAlt,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              );
+            },
+            child: Text(
+              AppLanguage.t('profile_logout'),
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'JosefinSans',
+              ),
             ),
           ),
         ],
@@ -272,6 +335,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 15),
                   _buildMenuTile(
+                    'Account Verification',
+                    '',
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VerificationDetailsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuTile(
                     AppLanguage.t('settings_privacy_policy'),
                     '',
                     _showPrivacyPolicyDialog,
@@ -300,6 +376,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       );
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _showLogoutDialog,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            AppLanguage.t('profile_logout'),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red,
+                              fontFamily: 'JosefinSans',
+                            ),
+                          ),
+                          const Icon(
+                            Icons.logout,
+                            color: Colors.red,
+                            size: 24,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 100),
                 ],

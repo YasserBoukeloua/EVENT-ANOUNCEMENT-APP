@@ -8,6 +8,10 @@ import 'package:eventify/cubits/profile/profile_cubit.dart';
 import 'package:eventify/cubits/profile/profile_state.dart';
 import 'package:eventify/cubits/favorites/favorites_cubit.dart';
 import 'package:eventify/cubits/favorites/favorites_state.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -19,16 +23,35 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  void _changeProfilePicture(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLanguage.t('profile_change_picture'), style: const TextStyle(fontFamily: 'JosefinSans')),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
+  Future<void> _changeProfilePicture(BuildContext context) async {
+    final ImagePicker picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        // Get app directory
+        final directory = await getApplicationDocumentsDirectory();
+        final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
+        final String savedPath = path.join(directory.path, fileName);
+
+        // Copy image to app directory
+        await File(image.path).copy(savedPath);
+
+        // Update profile
+        if (context.mounted) {
+          context.read<ProfileCubit>().updateProfilePicture(savedPath);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -54,6 +77,10 @@ class ProfilePage extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
+              
+              // Logout via Cubit
+              context.read<ProfileCubit>().logout();
+
               // Navigate back to login screen
               Navigator.pushAndRemoveUntil(
                 context,
@@ -218,12 +245,20 @@ class ProfilePage extends StatelessWidget {
                                   color: Colors.white,
                                   shape: BoxShape.circle,
                                   border: Border.all(color: Colors.white, width: 3),
+                                  image: user?.photo != null
+                                      ? DecorationImage(
+                                          image: FileImage(File(user!.photo!)),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                                child: const Icon(
-                                  Icons.person,
-                                  size: 45,
-                                  color: AppColors.primaryMedium,
-                                ),
+                                child: user?.photo == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 45,
+                                        color: AppColors.primaryMedium,
+                                      )
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 15),
@@ -285,17 +320,6 @@ class ProfilePage extends StatelessWidget {
                                 label: AppLanguage.t('profile_attended'),
                                 value: eventsAttended.toString(),
                                 color: Colors.green,
-                              ),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Colors.white.withOpacity(0.3),
-                              ),
-                              _buildScoreItem(
-                                icon: Icons.add_circle_outline,
-                                label: AppLanguage.t('profile_created'),
-                                value: eventsCreated.toString(),
-                                color: Colors.blue,
                               ),
                               Container(
                                 width: 1,

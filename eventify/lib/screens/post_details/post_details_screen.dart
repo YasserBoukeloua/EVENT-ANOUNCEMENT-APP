@@ -8,6 +8,7 @@ import 'package:eventify/cubits/repost/repost_cubit.dart'; // NEW: Import repost
 import 'package:eventify/data/repo/comment/comment_repository.dart';
 import 'package:eventify/services/session_service.dart';
 import 'package:intl/intl.dart';
+import 'package:eventify/screens/profile/visible_profile.dart';
 
 class PostDetails extends StatefulWidget {
   final dynamic event;
@@ -137,6 +138,46 @@ class _PostDetailsState extends State<PostDetails> {
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Creator Info
+        GestureDetector(
+          onTap: () {
+            final publisher = widget.event.publisher;
+            if (publisher != null && publisher.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VisibleProfilePage(username: publisher),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primaryDark,
+                child: Icon(Icons.person, size: 20, color: Colors.white),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.event.publisher ?? 'Unknown',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                  fontFamily: 'InterTight',
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.verified,
+                size: 16,
+                color: AppColors.primaryDark,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         Text(
           widget.event.nameOfevent ?? 'Event',
           style: const TextStyle(

@@ -4,6 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:eventify/constants/app_colors.dart';
 import 'package:eventify/cubits/repost/repost_cubit.dart';
 import 'package:eventify/cubits/repost/repost_state.dart';
+import 'package:eventify/cubits/profile/profile_cubit.dart';
+import 'package:eventify/cubits/profile/profile_state.dart';
+import 'package:eventify/screens/login/login_prompt_screen.dart';
 import 'package:eventify/data/databases/db_repost.dart';
 import 'package:intl/intl.dart';
 
@@ -12,130 +15,146 @@ class RepostScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primaryDark,
-      body: Column(
-        children: [
-          // Header
-          SafeArea(
-            bottom: false,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              color: AppColors.primaryDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Reposts Feed',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'JosefinSans',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'See what events people are sharing',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                      fontFamily: 'JosefinSans',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, profileState) {
+        // Check if user is authenticated
+        final isAuthenticated = profileState.user != null;
 
-          // Content
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1D1D6),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
+        if (!isAuthenticated) {
+          // Show login prompt for unauthenticated users
+          return const LoginPromptScreen(
+            featureName: 'Reposts',
+            description: 'Please log in or sign up to view and share event reposts',
+          );
+        }
+
+        // Show normal repost screen for authenticated users
+        return Scaffold(
+          backgroundColor: AppColors.primaryDark,
+          body: Column(
+            children: [
+              // Header
+              SafeArea(
+                bottom: false,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  color: AppColors.primaryDark,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Reposts Feed',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'JosefinSans',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'See what events people are sharing',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white70,
+                          fontFamily: 'JosefinSans',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _getAllRepostsWithUsers(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primaryDark,
-                      ),
-                    );
-                  }
 
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error loading reposts',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
+              // Content
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD1D1D6),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                  ),
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _getAllRepostsWithUsers(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primaryDark,
                           ),
-                        ],
-                      ),
-                    );
-                  }
+                        );
+                      }
 
-                  final reposts = snapshot.data ?? [];
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error loading reposts',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                  if (reposts.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.repeat,
-                            size: 80,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'No Reposts Yet',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Be the first to share an event!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                      final reposts = snapshot.data ?? [];
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: reposts.length,
-                    itemBuilder: (context, index) {
-                      final repost = reposts[index];
-                      return RepostCard(repostData: repost);
+                      if (reposts.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.repeat,
+                                size: 80,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'No Reposts Yet',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Be the first to share an event!',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: reposts.length,
+                        itemBuilder: (context, index) {
+                          final repost = reposts[index];
+                          return RepostCard(repostData: repost);
+                        },
+                      );
                     },
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
