@@ -19,7 +19,166 @@ class DBRepostsTable extends DBBaseTable {
     )
   ''';
 
-  // Get reposts for a user
+  // Get reposts for a user by username
+  Future<List<Map<String, dynamic>>> getRepostsByUsername(
+    String username,
+  ) async {
+    try {
+      final database = await DBHelper.getDatabase();
+
+      // First get the user ID from username
+      final userResults = await database.query(
+        'users',
+        where: 'username = ?',
+        whereArgs: [username],
+        limit: 1,
+      );
+
+      if (userResults.isEmpty) {
+        return [];
+      }
+
+      final userId = userResults.first['id'];
+
+      // Join with events to get event details
+      final results = await database.rawQuery(
+        '''
+        SELECT 
+          r.*,
+          e.id as event_id,
+          e.title as event_title,
+          e.description as event_description,
+          e.date as event_date,
+          e.location as event_location,
+          e.category as event_category,
+          e.publisher as event_publisher,
+          e.is_free as event_is_free,
+          e.photo_path as event_photo_path,
+          e.created_at as event_created_at
+        FROM reposts r
+        LEFT JOIN events e ON r.event_id = e.id
+        WHERE r.user_id = ?
+        ORDER BY r.created_at DESC
+      ''',
+        [userId],
+      );
+
+      return results;
+    } catch (e, stacktrace) {
+      print('Get reposts by username error: $e --> $stacktrace');
+      return [];
+    }
+  }
+
+  // Get repost count for a user by username
+  Future<int> getRepostCountByUsername(String username) async {
+    try {
+      final database = await DBHelper.getDatabase();
+
+      final userResults = await database.query(
+        'users',
+        where: 'username = ?',
+        whereArgs: [username],
+        limit: 1,
+      );
+
+      if (userResults.isEmpty) {
+        return 0;
+      }
+
+      final userId = userResults.first['id'];
+
+      final results = await database.query(
+        db_table,
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      return results.length;
+    } catch (e, stacktrace) {
+      print('Get repost count error: $e --> $stacktrace');
+      return 0;
+    }
+  }
+
+  // Get repost by ID with full details
+  Future<Map<String, dynamic>?> getRepostById(int repostId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+
+      final results = await database.rawQuery(
+        '''
+        SELECT 
+          r.*,
+          e.id as event_id,
+          e.title as event_title,
+          e.description as event_description,
+          e.date as event_date,
+          e.location as event_location,
+          e.category as event_category,
+          e.publisher as event_publisher,
+          e.is_free as event_is_free,
+          e.photo_path as event_photo_path,
+          e.created_at as event_created_at,
+          u.username as user_username,
+          u.name as user_name,
+          u.lastname as user_lastname,
+          u.photo as user_photo
+        FROM reposts r
+        LEFT JOIN events e ON r.event_id = e.id
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE r.id = ?
+      ''',
+        [repostId],
+      );
+
+      if (results.isEmpty) {
+        return null;
+      }
+
+      return results.first;
+    } catch (e, stacktrace) {
+      print('Get repost by ID error: $e --> $stacktrace');
+      return null;
+    }
+  }
+
+  // Get repost by user ID
+  Future<List<Map<String, dynamic>>> getRepostsByUserId(int userId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+
+      // Join with events to get event details
+      final results = await database.rawQuery(
+        '''
+        SELECT 
+          r.*,
+          e.id as event_id,
+          e.title as event_title,
+          e.description as event_description,
+          e.date as event_date,
+          e.location as event_location,
+          e.category as event_category,
+          e.publisher as event_publisher,
+          e.is_free as event_is_free,
+          e.photo_path as event_photo_path,
+          e.created_at as event_created_at
+        FROM reposts r
+        LEFT JOIN events e ON r.event_id = e.id
+        WHERE r.user_id = ?
+        ORDER BY r.created_at DESC
+      ''',
+        [userId],
+      );
+
+      return results;
+    } catch (e, stacktrace) {
+      print('Get reposts by user ID error: $e --> $stacktrace');
+      return [];
+    }
+  }
+
+  // Get reposts for a user (by user ID)
   Future<List<Map<String, dynamic>>> getRepostsByUser(int userId) async {
     try {
       final database = await DBHelper.getDatabase();

@@ -8,6 +8,8 @@ import 'package:eventify/cubits/profile/profile_cubit.dart';
 import 'package:eventify/cubits/profile/profile_state.dart';
 import 'package:eventify/screens/login/login_prompt_screen.dart';
 import 'package:eventify/data/databases/db_repost.dart';
+import 'package:eventify/screens/profile/visible_profile.dart';
+import 'package:eventify/screens/post_details/post_details_screen.dart';
 import 'package:intl/intl.dart';
 
 class RepostScreen extends StatelessWidget {
@@ -24,7 +26,8 @@ class RepostScreen extends StatelessWidget {
           // Show login prompt for unauthenticated users
           return const LoginPromptScreen(
             featureName: 'Reposts',
-            description: 'Please log in or sign up to view and share event reposts',
+            description:
+                'Please log in or sign up to view and share event reposts',
           );
         }
 
@@ -91,7 +94,11 @@ class RepostScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                              const Icon(
+                                Icons.error_outline,
+                                size: 60,
+                                color: Colors.red,
+                              ),
                               const SizedBox(height: 16),
                               Text(
                                 'Error loading reposts',
@@ -172,16 +179,14 @@ class RepostScreen extends StatelessWidget {
 class RepostCard extends StatelessWidget {
   final Map<String, dynamic> repostData;
 
-  const RepostCard({
-    Key? key,
-    required this.repostData,
-  }) : super(key: key);
+  const RepostCard({Key? key, required this.repostData}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     // Extract data from the map
     final eventTitle = repostData['event_title'] ?? 'Event';
-    final eventImage = repostData['event_photo_path'] ?? 'lib/assets/event4.jpg';
+    final eventImage =
+        repostData['event_photo_path'] ?? 'lib/assets/event4.jpg';
     final eventLocation = repostData['event_location'] ?? 'Location';
     final eventDate = repostData['event_date'];
     final username = repostData['user_username'] ?? 'User';
@@ -250,21 +255,51 @@ class RepostCard extends StatelessWidget {
                 // User info row
                 Row(
                   children: [
-                    // User avatar
-                    _buildUserAvatar(userPhoto, displayName),
+                    // User avatar - tappable to go to user profile
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => VisibleProfilePage(
+                              username: username,
+                              fullName: displayName != username
+                                  ? displayName
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                      child: _buildUserAvatar(userPhoto, displayName),
+                    ),
                     const SizedBox(width: 12),
-                    
+
                     // User name and repost info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => VisibleProfilePage(
+                                    username: username,
+                                    fullName: displayName != username
+                                        ? displayName
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              displayName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -288,16 +323,12 @@ class RepostCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     // Repost icon
-                    Icon(
-                      Icons.repeat,
-                      color: AppColors.primaryDark,
-                      size: 20,
-                    ),
+                    Icon(Icons.repeat, color: AppColors.primaryDark, size: 20),
                   ],
                 ),
-                
+
                 // Caption if available
                 if (caption != null && caption.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -317,94 +348,114 @@ class RepostCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                
-                // Event preview
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(),
-                  ),
-                  child: Row(
-                    children: [
-                      // Event image
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          image: DecorationImage(
-                            image: AssetImage(eventImage),
-                            fit: BoxFit.cover,
+
+                // Event preview - tappable to go to event details
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to the original event details
+                    // Create a simple event object for navigation
+                    final eventData = {
+                      'id': repostData['event_id'],
+                      'title': eventTitle,
+                      'pathToImg': eventImage,
+                      'location': eventLocation,
+                      'date': eventDate,
+                      'description': repostData['event_description'] ?? '',
+                    };
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PostDetails(event: eventData),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        // Event image
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            image: DecorationImage(
+                              image: AssetImage(eventImage),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
-                      ),
-                      
-                      const SizedBox(width: 12),
-                      
-                      // Event info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              eventTitle,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  size: 14,
-                                  color: Colors.grey,
+
+                        const SizedBox(width: 12),
+
+                        // Event info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                eventTitle,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    eventLocation,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      eventLocation,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    formattedEventDate,
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  size: 14,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  formattedEventDate,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                
+
                 // Actions row (optional - add like, comment buttons)
                 const SizedBox(height: 12),
                 Row(
@@ -424,10 +475,7 @@ class RepostCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     const Text(
                       '0',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(width: 16),
                     IconButton(
@@ -445,10 +493,7 @@ class RepostCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     const Text(
                       '0',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const Spacer(),
                     IconButton(
