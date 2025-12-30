@@ -52,9 +52,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'EventApp.apps.EventappConfig',
     'rest_framework',
-
-    'EventApp.apps',
-    'EventApp',  
     "corsheaders",
 ]
 
