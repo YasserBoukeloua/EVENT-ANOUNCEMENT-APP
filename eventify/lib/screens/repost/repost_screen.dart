@@ -7,9 +7,11 @@ import 'package:eventify/cubits/repost/repost_state.dart';
 import 'package:eventify/cubits/profile/profile_cubit.dart';
 import 'package:eventify/cubits/profile/profile_state.dart';
 import 'package:eventify/screens/login/login_prompt_screen.dart';
-import 'package:eventify/data/databases/db_repost.dart';
 import 'package:eventify/screens/profile/visible_profile.dart';
 import 'package:eventify/screens/post_details/post_details_screen.dart';
+import 'package:eventify/components/top_picks.dart';
+import 'package:eventify/data/repo/comment/comment_repository.dart';
+import 'package:eventify/services/session_service.dart';
 import 'package:intl/intl.dart';
 
 class RepostScreen extends StatelessWidget {
@@ -176,25 +178,235 @@ class RepostScreen extends StatelessWidget {
   }
 }
 
-class RepostCard extends StatelessWidget {
+class RepostCard extends StatefulWidget {
   final Map<String, dynamic> repostData;
 
   const RepostCard({Key? key, required this.repostData}) : super(key: key);
 
   @override
+  State<RepostCard> createState() => _RepostCardState();
+}
+
+class _RepostCardState extends State<RepostCard> {
+  final CommentRepositoryBase _commentRepo =
+      CommentRepositoryBase.getInstance();
+  bool _isLiked = false;
+  int _likeCount = 0;
+  int _commentCount = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInteractionData();
+  }
+
+  Future<void> _loadInteractionData() async {
+    try {
+      final repostId = widget.repostData['id'];
+      if (repostId != null) {
+        final dbReposts = DBRepostsTable();
+
+        // Get like count - use the new method
+        _likeCount = await dbReposts.getRepostLikeCount(repostId);
+
+        // Check if current user liked this repost
+        final userId = await SessionService.getUserId();
+        if (userId != null) {
+          _isLiked = await dbReposts.hasUserLikedRepost(userId, repostId);
+        }
+      }
+
+      // Load comment count from the original event
+      final eventId = widget.repostData['event_id'];
+      if (eventId != null) {
+        final comments = await _commentRepo.getCommentsByEventId(eventId);
+        _commentCount = comments.length;
+      }
+    } catch (e) {
+      print('Error loading interaction data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    final userId = await SessionService.getUserId();
+    if (userId == null) {
+      _showLoginPrompt();
+      return;
+    }
+
+    final repostId = widget.repostData['id'];
+    if (repostId == null) return;
+
+    final dbReposts = DBRepostsTable();
+    final success = await dbReposts.toggleRepostLike(userId, repostId);
+
+    if (success) {
+      setState(() {
+        _isLiked = !_isLiked;
+        _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isLiked ? 'Liked repost!' : 'Removed like',
+            style: const TextStyle(fontFamily: 'InterTight'),
+          ),
+          duration: const Duration(seconds: 1),
+          backgroundColor: _isLiked ? AppColors.success : Colors.grey,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to update like'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _navigateToComments() async {
+    final userId = await SessionService.getUserId();
+    if (userId == null) {
+      _showLoginPrompt();
+      return;
+    }
+
+    // Create event object from repost data
+    final event = TopPicks(
+      widget.repostData['event_id'],
+      widget.repostData['event_date'] != null
+          ? DateTime.parse(widget.repostData['event_date'])
+          : null,
+      widget.repostData['event_title'] ?? 'Event',
+      widget.repostData['event_photo_path'] ?? 'lib/assets/event4.jpg',
+      widget.repostData['event_location'] ?? 'Location',
+      widget.repostData['event_publisher'] ?? 'Publisher',
+      widget.repostData['event_is_free'] == 1,
+      widget.repostData['event_category'] ?? 'Category',
+      description: widget.repostData['event_description'],
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PostDetails(event: event)),
+    );
+  }
+
+  void _showLoginPrompt() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Please log in to interact with posts',
+          style: TextStyle(fontFamily: 'InterTight'),
+        ),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primaryDark,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        action: SnackBarAction(
+          label: 'Login',
+          textColor: Colors.white,
+          onPressed: () {
+            // Navigate to login screen
+            // Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToEventDetails() {
+    final event = TopPicks(
+      widget.repostData['event_id'],
+      widget.repostData['event_date'] != null
+          ? DateTime.parse(widget.repostData['event_date'])
+          : null,
+      widget.repostData['event_title'] ?? 'Event',
+      widget.repostData['event_photo_path'] ?? 'lib/assets/event4.jpg',
+      widget.repostData['event_location'] ?? 'Location',
+      widget.repostData['event_publisher'] ?? 'Publisher',
+      widget.repostData['event_is_free'] == 1,
+      widget.repostData['event_category'] ?? 'Category',
+      description: widget.repostData['event_description'],
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PostDetails(event: event)),
+    );
+  }
+
+  void _navigateToUserProfile() {
+    final username = widget.repostData['user_username'] ?? 'User';
+    final userName = widget.repostData['user_name'] as String?;
+    final userLastName = widget.repostData['user_lastname'] as String?;
+
+    String displayName = username;
+    if (userName != null && userName.isNotEmpty) {
+      displayName = userLastName != null && userLastName.isNotEmpty
+          ? '$userName $userLastName'
+          : userName;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VisibleProfilePage(
+          username: username,
+          fullName: displayName != username ? displayName : null,
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.primaryDark),
+        ),
+      );
+    }
+
     // Extract data from the map
-    final eventTitle = repostData['event_title'] ?? 'Event';
+    final eventTitle = widget.repostData['event_title'] ?? 'Event';
     final eventImage =
-        repostData['event_photo_path'] ?? 'lib/assets/event4.jpg';
-    final eventLocation = repostData['event_location'] ?? 'Location';
-    final eventDate = repostData['event_date'];
-    final username = repostData['user_username'] ?? 'User';
-    final userName = repostData['user_name'] as String?;
-    final userLastName = repostData['user_lastname'] as String?;
-    final userPhoto = repostData['user_photo'] as String?;
-    final caption = repostData['caption'] as String?;
-    final repostTime = repostData['created_at'];
+        widget.repostData['event_photo_path'] ?? 'lib/assets/event4.jpg';
+    final eventLocation = widget.repostData['event_location'] ?? 'Location';
+    final eventDate = widget.repostData['event_date'];
+    final username = widget.repostData['user_username'] ?? 'User';
+    final userName = widget.repostData['user_name'] as String?;
+    final userLastName = widget.repostData['user_lastname'] as String?;
+    final userPhoto = widget.repostData['user_photo'] as String?;
+    final caption = widget.repostData['caption'] as String?;
+    final repostTime = widget.repostData['created_at'];
 
     // Create display name
     String displayName = username;
@@ -241,293 +453,321 @@ class RepostCard extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            // Navigate to event details
-            // Navigator.push(context, MaterialPageRoute(builder: (context) => PostDetails(event: ...)));
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // User info row
-                Row(
-                  children: [
-                    // User avatar - tappable to go to user profile
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => VisibleProfilePage(
-                              username: username,
-                              fullName: displayName != username
-                                  ? displayName
-                                  : null,
-                            ),
-                          ),
-                        );
-                      },
-                      child: _buildUserAvatar(userPhoto, displayName),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // User name and repost info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => VisibleProfilePage(
-                                    username: username,
-                                    fullName: displayName != username
-                                        ? displayName
-                                        : null,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              displayName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryDark,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.repeat,
-                                size: 14,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Shared $timeAgo',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Repost icon
-                    Icon(Icons.repeat, color: AppColors.primaryDark, size: 20),
-                  ],
-                ),
-
-                // Caption if available
-                if (caption != null && caption.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      caption,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User info row
+            Padding(
+              padding: const EdgeInsets.all(16).copyWith(
+                bottom: caption != null && caption.isNotEmpty ? 8 : 16,
+              ),
+              child: Row(
+                children: [
+                  // User avatar - tappable to go to user profile
+                  GestureDetector(
+                    onTap: _navigateToUserProfile,
+                    child: _buildUserAvatar(userPhoto, displayName),
                   ),
-                  const SizedBox(height: 12),
-                ],
+                  const SizedBox(width: 12),
 
-                // Event preview - tappable to go to event details
-                GestureDetector(
-                  onTap: () {
-                    // Navigate to the original event details
-                    // Create a simple event object for navigation
-                    final eventData = {
-                      'id': repostData['event_id'],
-                      'title': eventTitle,
-                      'pathToImg': eventImage,
-                      'location': eventLocation,
-                      'date': eventDate,
-                      'description': repostData['event_description'] ?? '',
-                    };
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PostDetails(event: eventData),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Row(
+                  // User name and repost info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Event image
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            image: DecorationImage(
-                              image: AssetImage(eventImage),
-                              fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: _navigateToUserProfile,
+                          child: Text(
+                            displayName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
                             ),
                           ),
                         ),
-
-                        const SizedBox(width: 12),
-
-                        // Event info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                eventTitle,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.repeat,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Shared $timeAgo',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
                               ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      eventLocation,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today,
-                                    size: 14,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    formattedEventDate,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ),
 
-                // Actions row (optional - add like, comment buttons)
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        // Like repost
-                      },
-                      icon: const Icon(
-                        Icons.favorite_border,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '0',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 16),
-                    IconButton(
-                      onPressed: () {
-                        // Comment on repost
-                      },
-                      icon: const Icon(
-                        Icons.comment_outlined,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '0',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () {
-                        // Share repost
-                      },
-                      icon: const Icon(
-                        Icons.share_outlined,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ],
+                  // Repost icon
+                  Icon(Icons.repeat, color: AppColors.primaryDark, size: 20),
+                ],
+              ),
             ),
-          ),
+
+            // Caption if available
+            if (caption != null && caption.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    caption,
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Event preview - tappable to go to event details
+            GestureDetector(
+              onTap: _navigateToEventDetails,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      // Event image
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          image: DecorationImage(
+                            image: AssetImage(eventImage),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // Event info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              eventTitle,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    eventLocation,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  formattedEventDate,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Actions row - UPDATED: Working like and comment buttons, removed share
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  // Like button
+                  IconButton(
+                    onPressed: _toggleLike,
+                    icon: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      size: 22,
+                      color: _isLiked ? Colors.red : Colors.grey,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _likeCount.toString(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: _isLiked ? Colors.red : Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+
+                  // Comment button
+                  IconButton(
+                    onPressed: _navigateToComments,
+                    icon: const Icon(
+                      Icons.comment_outlined,
+                      size: 22,
+                      color: Colors.grey,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _commentCount.toString(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Add delete button if this is current user's repost
+                  FutureBuilder<bool>(
+                    future: _isCurrentUserRepost(),
+                    builder: (context, snapshot) {
+                      if (snapshot.data == true) {
+                        return IconButton(
+                          onPressed: _deleteRepost,
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 22,
+                            color: Colors.red,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Delete repost',
+                        );
+                      }
+                      return const SizedBox();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Future<bool> _isCurrentUserRepost() async {
+    final userId = await SessionService.getUserId();
+    final repostUserId = widget.repostData['user_id'];
+    return userId != null && repostUserId == userId;
+  }
+
+  Future<void> _deleteRepost() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Repost'),
+        content: const Text('Are you sure you want to delete this repost?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final userId = await SessionService.getUserId();
+        final eventId = widget.repostData['event_id'];
+
+        if (userId != null && eventId != null) {
+          final dbReposts = DBRepostsTable();
+          await dbReposts.removeRepost(userId, eventId);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Repost deleted successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+
+          // You might want to refresh the repost list here
+          // Could use a callback or Bloc to update the parent
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting repost: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildUserAvatar(String? userPhoto, String displayName) {
     if (userPhoto != null && userPhoto.isNotEmpty) {
-      // If user has a photo
       return CircleAvatar(
         radius: 20,
-        backgroundImage: AssetImage(userPhoto), // Use NetworkImage for URLs
+        backgroundImage: AssetImage(userPhoto),
         backgroundColor: AppColors.primaryDark,
       );
     } else {
-      // If no photo, show initial
       return CircleAvatar(
         radius: 20,
         backgroundColor: AppColors.primaryDark,

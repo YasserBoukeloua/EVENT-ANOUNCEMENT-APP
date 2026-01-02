@@ -19,6 +19,18 @@ class DBRepostsTable extends DBBaseTable {
     )
   ''';
 
+  static String sql_repost_likes = '''
+    CREATE TABLE IF NOT EXISTS repost_likes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      repost_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (repost_id) REFERENCES reposts (id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users (id),
+      UNIQUE(repost_id, user_id)
+    )
+  ''';
+
   // Get reposts for a user by username
   Future<List<Map<String, dynamic>>> getRepostsByUsername(
     String username,
@@ -276,6 +288,67 @@ class DBRepostsTable extends DBBaseTable {
       return count > 0;
     } catch (e, stacktrace) {
       print('Remove repost error: $e --> $stacktrace');
+      return false;
+    }
+  }
+
+  Future<int> getRepostLikeCount(int repostId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      final results = await database.query(
+        'repost_likes',
+        where: 'repost_id = ?',
+        whereArgs: [repostId],
+      );
+      return results.length;
+    } catch (e) {
+      print('Get repost like count error: $e');
+      return 0;
+    }
+  }
+
+  Future<bool> hasUserLikedRepost(int userId, int repostId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      final results = await database.query(
+        'repost_likes',
+        where: 'user_id = ? AND repost_id = ?',
+        whereArgs: [userId, repostId],
+      );
+      return results.isNotEmpty;
+    } catch (e) {
+      print('Check repost like error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> toggleRepostLike(int userId, int repostId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      
+      // Check if already liked
+      final hasLiked = await hasUserLikedRepost(userId, repostId);
+      
+      if (hasLiked) {
+        // Unlike
+        final count = await database.delete(
+          'repost_likes',
+          where: 'user_id = ? AND repost_id = ?',
+          whereArgs: [userId, repostId],
+        );
+        return count > 0;
+      } else {
+        // Like
+        final now = DateTime.now().toIso8601String();
+        final id = await database.insert('repost_likes', {
+          'repost_id': repostId,
+          'user_id': userId,
+          'created_at': now,
+        });
+        return id > 0;
+      }
+    } catch (e) {
+      print('Toggle repost like error: $e');
       return false;
     }
   }

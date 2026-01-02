@@ -6,11 +6,11 @@ import 'db_users.dart';
 import 'db_events.dart';
 import 'db_favorites.dart';
 import 'db_comments.dart';
-import 'db_repost.dart'; // NEW
+import 'db_repost.dart';
 
 class DBHelper {
   static const _database_name = "EventifyDB.db";
-  static const _database_version = 3; // Incremented for reposts table
+  static const _database_version = 4; // CHANGE FROM 3 TO 4
   static Database? database;
 
   static List<String> sql_codes = [
@@ -18,7 +18,8 @@ class DBHelper {
     DBEventsTable.sql_code,
     DBFavoritesTable.sql_code,
     DBCommentsTable.sql_code,
-    DBRepostsTable.sql_code, // NEW
+    DBRepostsTable.sql_code,
+    DBRepostsTable.sql_repost_likes, // NEW
   ];
 
   static Future<Database> getDatabase() async {
@@ -42,6 +43,10 @@ class DBHelper {
         // Add reposts table for users upgrading from version 2
         if (oldVersion < 3) {
           db.execute(DBRepostsTable.sql_code);
+        }
+        // Add repost_likes table for users upgrading from version 3
+        if (oldVersion < 4) { // ADD THIS - NEW MIGRATION
+          db.execute(DBRepostsTable.sql_repost_likes);
         }
       },
     );
