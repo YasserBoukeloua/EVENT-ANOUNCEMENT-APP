@@ -1,4 +1,5 @@
 import 'package:eventify/data/databases/db_repost.dart';
+import 'package:eventify/screens/repost/repost_comments_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:eventify/constants/app_colors.dart';
@@ -207,21 +208,17 @@ class _RepostCardState extends State<RepostCard> {
       if (repostId != null) {
         final dbReposts = DBRepostsTable();
 
-        // Get like count - use the new method
+        // Get repost like count
         _likeCount = await dbReposts.getRepostLikeCount(repostId);
+
+        // Get repost comment count (NOT event comments)
+        _commentCount = await dbReposts.getRepostCommentCount(repostId);
 
         // Check if current user liked this repost
         final userId = await SessionService.getUserId();
         if (userId != null) {
           _isLiked = await dbReposts.hasUserLikedRepost(userId, repostId);
         }
-      }
-
-      // Load comment count from the original event
-      final eventId = widget.repostData['event_id'];
-      if (eventId != null) {
-        final comments = await _commentRepo.getCommentsByEventId(eventId);
-        _commentCount = comments.length;
       }
     } catch (e) {
       print('Error loading interaction data: $e');
@@ -277,32 +274,28 @@ class _RepostCardState extends State<RepostCard> {
     }
   }
 
-  void _navigateToComments() async {
+  Future<void> _navigateToComments() async {
     final userId = await SessionService.getUserId();
     if (userId == null) {
       _showLoginPrompt();
       return;
     }
 
-    // Create event object from repost data
-    final event = TopPicks(
-      widget.repostData['event_id'],
-      widget.repostData['event_date'] != null
-          ? DateTime.parse(widget.repostData['event_date'])
-          : null,
-      widget.repostData['event_title'] ?? 'Event',
-      widget.repostData['event_photo_path'] ?? 'lib/assets/event4.jpg',
-      widget.repostData['event_location'] ?? 'Location',
-      widget.repostData['event_publisher'] ?? 'Publisher',
-      widget.repostData['event_is_free'] == 1,
-      widget.repostData['event_category'] ?? 'Category',
-      description: widget.repostData['event_description'],
+    // Navigate and wait for the result (comment count)
+    final updatedCount = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            RepostCommentsScreen(repostData: widget.repostData),
+      ),
     );
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => PostDetails(event: event)),
-    );
+    // Update the comment count if we got a result back
+    if (updatedCount != null && mounted) {
+      setState(() {
+        _commentCount = updatedCount;
+      });
+    }
   }
 
   void _showLoginPrompt() {

@@ -31,6 +31,17 @@ class DBRepostsTable extends DBBaseTable {
     )
   ''';
 
+  static String sql_repost_comments = '''
+  CREATE TABLE IF NOT EXISTS repost_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    repost_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (repost_id) REFERENCES reposts (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )
+''';
   // Get reposts for a user by username
   Future<List<Map<String, dynamic>>> getRepostsByUsername(
     String username,
@@ -325,10 +336,10 @@ class DBRepostsTable extends DBBaseTable {
   Future<bool> toggleRepostLike(int userId, int repostId) async {
     try {
       final database = await DBHelper.getDatabase();
-      
+
       // Check if already liked
       final hasLiked = await hasUserLikedRepost(userId, repostId);
-      
+
       if (hasLiked) {
         // Unlike
         final count = await database.delete(
@@ -349,6 +360,83 @@ class DBRepostsTable extends DBBaseTable {
       }
     } catch (e) {
       print('Toggle repost like error: $e');
+      return false;
+    }
+  }
+
+  // Repost Comment Methods
+  Future<List<Map<String, dynamic>>> getRepostComments(int repostId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      final results = await database.rawQuery(
+        '''
+      SELECT 
+        rc.*,
+        u.username as user_username,
+        u.name as user_name,
+        u.lastname as user_lastname,
+        u.photo as user_photo
+      FROM repost_comments rc
+      LEFT JOIN users u ON rc.user_id = u.id
+      WHERE rc.repost_id = ?
+      ORDER BY rc.created_at DESC
+    ''',
+        [repostId],
+      );
+      return results;
+    } catch (e) {
+      print('Get repost comments error: $e');
+      return [];
+    }
+  }
+
+  Future<int> getRepostCommentCount(int repostId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      final results = await database.query(
+        'repost_comments',
+        where: 'repost_id = ?',
+        whereArgs: [repostId],
+      );
+      return results.length;
+    } catch (e) {
+      print('Get repost comment count error: $e');
+      return 0;
+    }
+  }
+
+  Future<bool> addRepostComment(
+    int repostId,
+    int userId,
+    String content,
+  ) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      final now = DateTime.now().toIso8601String();
+      final id = await database.insert('repost_comments', {
+        'repost_id': repostId,
+        'user_id': userId,
+        'content': content,
+        'created_at': now,
+      });
+      return id > 0;
+    } catch (e) {
+      print('Add repost comment error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteRepostComment(int commentId) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      final count = await database.delete(
+        'repost_comments',
+        where: 'id = ?',
+        whereArgs: [commentId],
+      );
+      return count > 0;
+    } catch (e) {
+      print('Delete repost comment error: $e');
       return false;
     }
   }
