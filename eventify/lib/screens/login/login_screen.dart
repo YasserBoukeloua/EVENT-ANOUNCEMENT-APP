@@ -8,6 +8,7 @@ import 'package:eventify/repositories/auth_repository.dart';
 import 'package:eventify/cubits/auth/login/login_cubit.dart';
 import 'package:eventify/cubits/auth/login/login_state.dart';
 import 'package:eventify/cubits/profile/profile_cubit.dart';
+import 'package:eventify/cubits/notifications/notifications_cubit.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -48,6 +49,9 @@ class _LoginScreenContentState extends State<LoginScreenContent> {
           if (state is LoginSuccess) {
             // Update the profile cubit with the logged-in user
             context.read<ProfileCubit>().setUser(state.user);
+            
+            // Load notifications for the logged-in user
+            context.read<NotificationsCubit>().loadNotifications(state.user.id);
             
             // Navigate to home on successful login
             Navigator.pushReplacement(

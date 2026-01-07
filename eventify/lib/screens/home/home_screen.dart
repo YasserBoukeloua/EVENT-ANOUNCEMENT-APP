@@ -1,8 +1,9 @@
-import 'package:eventify/components/top_picks.dart';
 import 'package:eventify/localization/app_language.dart';
 import 'package:eventify/screens/post_details/post_details_screen.dart';
 import 'package:eventify/screens/profile/profile_screen.dart';
 import 'package:eventify/screens/login/login_screen.dart';
+import 'dart:io';
+import 'package:eventify/components/top_picks.dart';
 import 'package:eventify/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +13,9 @@ import 'package:eventify/cubits/profile/profile_state.dart';
 import 'package:eventify/cubits/events/events_cubit.dart';
 import 'package:eventify/cubits/events/events_state.dart';
 import 'package:eventify/screens/profile/visible_profile.dart';
+import 'package:eventify/screens/notifications/notifications_screen.dart';
+import 'package:eventify/cubits/notifications/notifications_cubit.dart';
+import 'package:eventify/cubits/notifications/notifications_state.dart';
 
 class Home extends StatefulWidget {
   final Function(int)? onTabChange;
@@ -27,6 +31,46 @@ class _HomeState extends State<Home> {
   String _searchQuery = '';
   final ScrollController _scrollController = ScrollController();
   final String _userCity = 'Algiers';
+
+  // Helper method to build image
+  Widget _buildEventImage(String? imagePath, {required double height, required double width}) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        height: height,
+        width: width,
+        color: Colors.grey[300],
+        child: const Icon(Icons.event),
+      );
+    }
+
+    if (imagePath.startsWith('lib/assets')) {
+      return Image.asset(
+        imagePath,
+        height: height,
+        width: width,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: height,
+          width: width,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event),
+        ),
+      );
+    } else {
+      return Image.file(
+        File(imagePath),
+        height: height,
+        width: width,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: height,
+          width: width,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event),
+        ),
+      );
+    }
+  }
 
   List<TopPicks> _filterAndSortEvents(List<TopPicks> events) {
     List<TopPicks> filtered = List<TopPicks>.from(events);
@@ -207,6 +251,83 @@ class _HomeState extends State<Home> {
                                   },
                                 ),
                               ),
+                              Row(
+                                children: [
+                                  BlocBuilder<NotificationsCubit, NotificationsState>(
+                                    builder: (context, state) {
+                                      int unreadCount = 0;
+                                      if (state is NotificationsLoaded) {
+                                        unreadCount = state.unreadCount;
+                                      }
+                                      
+                                      return GestureDetector(
+                                        onTap: () {
+                                          final user = context.read<ProfileCubit>().state.user;
+                                          if (user != null) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const NotificationsScreen(),
+                                              ),
+                                            );
+                                          } else {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const LoginScreen(),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        child: Stack(
+                                          children: [
+                                            Container(
+                                              width: 50,
+                                              height: 50,
+                                              margin: const EdgeInsets.only(right: 10),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(30),
+                                                border: Border.all(width: 3, color: Colors.white.withOpacity(0.3)),
+                                                color: Colors.white.withOpacity(0.1),
+                                              ),
+                                              child: const Icon(
+                                                Icons.notifications_outlined,
+                                                color: Colors.white,
+                                                size: 28,
+                                              ),
+                                            ),
+                                            if (unreadCount > 0)
+                                              Positioned(
+                                                right: 10,
+                                                top: 0,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(4),
+                                                  decoration: const BoxDecoration(
+                                                    color: Colors.red,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  constraints: const BoxConstraints(
+                                                    minWidth: 16,
+                                                    minHeight: 16,
+                                                  ),
+                                                  child: Text(
+                                                    unreadCount > 9 ? '9+' : unreadCount.toString(),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                               BlocBuilder<ProfileCubit, ProfileState>(
                                 builder: (context, profileState) {
                                   final isAuthenticated = profileState.user != null;
@@ -348,17 +469,10 @@ class _HomeState extends State<Home> {
                                     children: [
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(25),
-                                        child: Image.asset(
-                                          event.pathToImg ?? 'lib/assets/event1.webp',
+                                        child: _buildEventImage(
+                                          event.pathToImg,
                                           height: 90,
                                           width: 67,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Container(
-                                            height: 90,
-                                            width: 67,
-                                            color: Colors.grey[300],
-                                            child: const Icon(Icons.event),
-                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -517,17 +631,10 @@ class _HomeState extends State<Home> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(15),
-                                      child: Image.asset(
-                                        event.pathToImg ?? 'lib/assets/event1.webp',
+                                      child: _buildEventImage(
+                                        event.pathToImg,
                                         height: 150,
                                         width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          height: 150,
-                                          width: double.infinity,
-                                          color: Colors.grey[300],
-                                          child: const Icon(Icons.event, size: 48),
-                                        ),
                                       ),
                                     ),
                                     Padding(

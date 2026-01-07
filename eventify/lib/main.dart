@@ -33,6 +33,7 @@ import 'package:eventify/cubits/profile/profile_state.dart';
 import 'package:eventify/cubits/settings/settings_cubit.dart';
 import 'package:eventify/cubits/navigation/navigation_cubit.dart';
 import 'package:eventify/cubits/navigation/navigation_state.dart';
+import 'package:eventify/cubits/notifications/notifications_cubit.dart';
 
 import 'package:eventify/data/database_seeder.dart';
 
@@ -87,6 +88,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<RepostCubit>(
           create: (context) => RepostCubit(repostsRepository)..loadReposts(),
+        ),
+        BlocProvider<NotificationsCubit>(
+          create: (context) => NotificationsCubit(),
         ),
       ],
       child: MaterialApp(

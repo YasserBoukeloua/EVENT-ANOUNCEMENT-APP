@@ -17,6 +17,7 @@ class EventRepository extends EventRepositoryBase {
       record['is_free'] == 1,
       record['category'],
       description: record['description'],
+      registrationLink: record['registration_link'],
     );
   }
 
@@ -111,6 +112,40 @@ class EventRepository extends EventRepositoryBase {
     } catch (e) {
       print('Filter events error: $e');
       return [];
+    }
+  }
+
+  // Create a new event and return its ID
+  Future<int?> createEvent({
+    required String title,
+    required String description,
+    required DateTime date,
+    required String location,
+    required String category,
+    required String publisher,
+    required bool isFree,
+    String? photoPath,
+    String? registrationLink,
+  }) async {
+    try {
+      final data = {
+        'title': title,
+        'description': description,
+        'date': date.toIso8601String(),
+        'location': location,
+        'category': category,
+        'publisher': publisher,
+        'is_free': isFree ? 1 : 0,
+        'photo_path': photoPath,
+        'registration_link': registrationLink,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      
+      final id = await _dbEvents.insertRecordGetId(data);
+      return id > 0 ? id : null;
+    } catch (e) {
+      print('Create event error: $e');
+      return null;
     }
   }
 }

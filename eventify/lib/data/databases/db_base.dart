@@ -20,6 +20,20 @@ class DBBaseTable {
     return false;
   }
 
+  Future<int> insertRecordGetId(Map<String, dynamic> data) async {
+    try {
+      final database = await DBHelper.getDatabase();
+      return await database.insert(
+        db_table,
+        data,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e, stacktrace) {
+      print('$e --> $stacktrace');
+    }
+    return -1;
+  }
+
   Future<List<Map<String, dynamic>>> getRecords() async {
     try {
       final database = await DBHelper.getDatabase();
