@@ -8,7 +8,9 @@ urlpatterns =[
     # API Routes
     path('', views.getRoutes),
 
-
+    # Authentication URLs
+    path('auth/login/', views.loginUser),
+    path('users/create/', views.createUser),
     
     # Event URLs
     path('events/', views.getEvents),
@@ -20,7 +22,6 @@ urlpatterns =[
     # User URLs
     path('users/', views.getUsers),
     path('users/<str:pk>/', views.getUser),
-    path('users/create/', views.createUser),
     path('users/<str:pk>/update/', views.updateUser),
     path('users/<str:pk>/delete/', views.deleteUser),
     

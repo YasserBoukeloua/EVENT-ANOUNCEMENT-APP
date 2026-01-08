@@ -38,8 +38,18 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "http://*.railway.app",
+    "https://*.railway.app",
+    "https://event-anouncement-app-production.up.railway.app",
 ]
 
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "https://event-anouncement-app-production.up.railway.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
@@ -52,14 +62,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'EventApp.apps.EventappConfig',
     'rest_framework',
-
-    'EventApp.apps',
-    'EventApp',  
     "corsheaders",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

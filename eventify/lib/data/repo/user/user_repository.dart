@@ -1,30 +1,26 @@
 import 'package:eventify/models/user_model.dart';
 import 'package:eventify/services/session_service.dart';
-import 'package:eventify/data/databases/db_users.dart';
+import 'package:eventify/services/api_service.dart';
 import 'user_repo_abstract.dart';
 
 class UserRepository extends UserRepositoryBase {
-  final _dbUsers = DBUsersTable();
+  final _apiService = ApiService();
 
   @override
   Future<User?> login(String email, String password) async {
     try {
-      final database = await _dbUsers.getRecords();
-      
-      // Find user with matching email and password
-      final userRecord = database.firstWhere(
-        (user) => user['email'] == email && user['password'] == password,
-        orElse: () => {},
-      );
+      final response = await _apiService.loginUser(email, password);
 
-      if (userRecord.isEmpty) {
+      if (response == null) {
         return null;
       }
 
-      // Save session
-      await SessionService.saveUserId(userRecord['id']);
+      final user = User.fromJson(response);
 
-      return User.fromJson(userRecord);
+      // Save session
+      await SessionService.saveUserId(user.id);
+
+      return user;
     } catch (e) {
       print('Login error: $e');
       return null;
@@ -34,29 +30,18 @@ class UserRepository extends UserRepositoryBase {
   @override
   Future<User?> signup(Map<String, dynamic> userData) async {
     try {
-      // Add created_at timestamp
-      userData['created_at'] = DateTime.now().toIso8601String();
-      userData['is_certified'] = 0; // New users are not certified by default
+      final response = await _apiService.signupUser(userData);
 
-      // Insert user
-      final success = await _dbUsers.insertRecord(userData);
-      
-      if (!success) {
+      if (response == null) {
         return null;
       }
 
-      // Get the newly created user
-      final records = await _dbUsers.getRecords();
-      if (records.isEmpty) {
-        return null;
-      }
+      final user = User.fromJson(response);
 
-      final newUser = records.first;
-      
       // Save session
-      await SessionService.saveUserId(newUser['id']);
+      await SessionService.saveUserId(user.id);
 
-      return User.fromJson(newUser);
+      return user;
     } catch (e) {
       print('Signup error: $e');
       return null;
@@ -66,13 +51,13 @@ class UserRepository extends UserRepositoryBase {
   @override
   Future<User?> getUser(int id) async {
     try {
-      final userRecord = await _dbUsers.getRecordById(id);
-      
-      if (userRecord == null) {
+      final response = await _apiService.getUser(id);
+
+      if (response == null) {
         return null;
       }
 
-      return User.fromJson(userRecord);
+      return User.fromJson(response);
     } catch (e) {
       print('Get user error: $e');
       return null;
@@ -83,7 +68,7 @@ class UserRepository extends UserRepositoryBase {
   Future<User?> getCurrentUser() async {
     try {
       final userId = await SessionService.getUserId();
-      
+
       if (userId == null) {
         return null;
       }
@@ -98,7 +83,8 @@ class UserRepository extends UserRepositoryBase {
   @override
   Future<bool> updateUser(int id, Map<String, dynamic> data) async {
     try {
-      return await _dbUsers.updateRecord(id, data);
+      await _apiService.updateUser(id, data);
+      return true;
     } catch (e) {
       print('Update user error: $e');
       return false;

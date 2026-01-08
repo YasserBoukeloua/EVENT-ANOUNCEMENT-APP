@@ -11,12 +11,58 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib.auth import authenticate
 from .serializers import (
     EventSerializer, UserSerializer, PostSerializer,
     CommentSerializer, EventFavoriteSerializer, PhotoSerializer
 )
 from .models import Event, User, Post, Comment, EventFavorite, Photo
+
+# Authentication Views
+@api_view(['POST'])
+def loginUser(request):
+    """
+    Login endpoint. Expects email and password.
+    Returns user data if credentials are valid.
+    """
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response(
+                {'error': 'Email and password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get user by email
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Invalid email or password'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Check password
+        if not user.check_password(password):
+            return Response(
+                {'error': 'Invalid email or password'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Return user data
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
 @api_view(['GET'])
+def getRoutes(request):
 def getRoutes(request):
     routes = [
         {
