@@ -2,18 +2,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Change this to your Django backend URL
-  static const String baseUrl = 'http://127.0.0.1:8000'; // For Android emulator
-
+  // Production API URL
+  static const String baseUrl =
+      'https://event-anouncement-app-production.up.railway.app';
 
   // GET request helper
   Future<dynamic> get(String endpoint) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
@@ -30,9 +28,7 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
       );
 
