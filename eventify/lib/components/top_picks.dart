@@ -8,6 +8,7 @@ class TopPicks {
   bool isFree;
   String category;
   String? description;
+  String? registrationLink;
 
   TopPicks(
     this.id,
@@ -19,6 +20,7 @@ class TopPicks {
     this.isFree,
     this.category, {
     this.description,
+    this.registrationLink,
   });
 }
 

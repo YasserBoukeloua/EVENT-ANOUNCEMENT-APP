@@ -8,6 +8,11 @@ import 'package:eventify/cubits/repost/repost_cubit.dart'; // NEW: Import repost
 import 'package:eventify/data/repo/comment/comment_repository.dart';
 import 'package:eventify/services/session_service.dart';
 import 'package:intl/intl.dart';
+import 'package:eventify/screens/profile/visible_profile.dart';
+import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:eventify/screens/login/login_screen.dart';
+import 'package:eventify/services/notification_service.dart';
 
 class PostDetails extends StatefulWidget {
   final dynamic event;
@@ -91,16 +96,27 @@ class _PostDetailsState extends State<PostDetails> {
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
         clipBehavior: Clip.hardEdge,
-        child: Image.asset(
-          widget.event.pathToImg ?? 'lib/assets/event1.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: Colors.grey[800],
-            child: const Center(
-              child: Icon(Icons.event, size: 80, color: Colors.white54),
-            ),
-          ),
-        ),
+        child: (widget.event.pathToImg != null && !widget.event.pathToImg!.startsWith('lib/assets'))
+            ? Image.file(
+                File(widget.event.pathToImg!),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey[800],
+                  child: const Center(
+                    child: Icon(Icons.event, size: 80, color: Colors.white54),
+                  ),
+                ),
+              )
+            : Image.asset(
+                widget.event.pathToImg ?? 'lib/assets/event1.webp',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey[800],
+                  child: const Center(
+                    child: Icon(Icons.event, size: 80, color: Colors.white54),
+                  ),
+                ),
+              ),
       ),
       Positioned(
         top: 35,
@@ -137,6 +153,46 @@ class _PostDetailsState extends State<PostDetails> {
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Creator Info
+        GestureDetector(
+          onTap: () {
+            final publisher = widget.event.publisher;
+            if (publisher != null && publisher.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VisibleProfilePage(username: publisher),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primaryDark,
+                child: Icon(Icons.person, size: 20, color: Colors.white),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.event.publisher ?? 'Unknown',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                  fontFamily: 'InterTight',
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.verified,
+                size: 16,
+                color: AppColors.primaryDark,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         Text(
           widget.event.nameOfevent ?? 'Event',
           style: const TextStyle(
@@ -502,7 +558,50 @@ class _PostDetailsState extends State<PostDetails> {
   );
 
   // NEW: Navigate to Repost Page
-  void _navigateToRepostPage() {
+  Future<void> _navigateToRepostPage() async {
+    // Check login status using ProfileCubit (more reliable for UI state)
+    final profileState = context.read<ProfileCubit>().state;
+    final isLoggedIn = profileState.user != null;
+    
+    if (!isLoggedIn) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Login Required',
+              style: TextStyle(fontFamily: 'InterTight')),
+          content: const Text('You have to log in to repost events.',
+              style: TextStyle(fontFamily: 'InterTight')),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel',
+                  style: TextStyle(
+                      fontFamily: 'InterTight', color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              child: const Text('Login',
+                  style: TextStyle(
+                      fontFamily: 'InterTight',
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -539,13 +638,38 @@ class _PostDetailsState extends State<PostDetails> {
       comment: text,
     );
 
+    // Trigger notification
+    await NotificationService().notifyComment(
+      entityId: widget.event.id,
+      entityType: 'event',
+      commenterId: userId,
+      commenterName: username,
+    );
+
     _commentController.clear();
     _focusNode.unfocus();
     _showSnack('Comment posted!');
     _loadComments(); // Reload comments from database
   }
 
-  void _register() => _showSnack('Registration initiated!');
+  Future<void> _register() async {
+    final link = widget.event.registrationLink;
+    if (link == null || link.isEmpty) {
+      _showSnack('No registration link available for this event');
+      return;
+    }
+
+    try {
+      final uri = Uri.parse(link);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        _showSnack('Could not launch registration link');
+      }
+    } catch (e) {
+      _showSnack('Invalid registration link');
+    }
+  }
 
   Future<void> _toggleFavorite() async {
     final cubit = context.read<FavoritesCubit>();
@@ -643,19 +767,25 @@ class _CreateRepostScreenState extends State<CreateRepostScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Event Image
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      image: DecorationImage(
-                        image: AssetImage(
-                          widget.event.pathToImg ?? 'lib/assets/event1.webp',
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(
+                          image: (widget.event.pathToImg != null &&
+                                  !widget.event.pathToImg!
+                                      .startsWith('lib/assets'))
+                              ? FileImage(File(widget.event.pathToImg!))
+                                  as ImageProvider
+                              : AssetImage(
+                                  widget.event.pathToImg ??
+                                      'lib/assets/event1.webp',
+                                ),
+                          fit: BoxFit.cover,
                         ),
-                        fit: BoxFit.cover,
                       ),
                     ),
-                  ),
                   const SizedBox(width: 16),
 
                   // Event Info
@@ -872,6 +1002,17 @@ class _CreateRepostScreenState extends State<CreateRepostScreen> {
       await repostCubit.addRepost(
         widget.event.id,
         caption: _captionController.text.trim(),
+      );
+
+      // Trigger notification
+      // Get user name for notification
+      final profileState = context.read<ProfileCubit>().state;
+      final userName = profileState.user?.name ?? profileState.user?.username ?? 'Someone';
+      
+      await NotificationService().notifyRepost(
+        widget.event.id,
+        userId,
+        userName,
       );
 
       // Show success message

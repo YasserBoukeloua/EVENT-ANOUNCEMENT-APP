@@ -8,6 +8,7 @@ import 'package:eventify/repositories/auth_repository.dart';
 import 'package:eventify/cubits/auth/login/login_cubit.dart';
 import 'package:eventify/cubits/auth/login/login_state.dart';
 import 'package:eventify/cubits/profile/profile_cubit.dart';
+import 'package:eventify/cubits/notifications/notifications_cubit.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -49,6 +50,9 @@ class _LoginScreenContentState extends State<LoginScreenContent> {
             // Update the profile cubit with the logged-in user
             context.read<ProfileCubit>().setUser(state.user);
             
+            // Load notifications for the logged-in user
+            context.read<NotificationsCubit>().loadNotifications(state.user.id);
+            
             // Navigate to home on successful login
             Navigator.pushReplacement(
               context,
@@ -84,7 +88,18 @@ class _LoginScreenContentState extends State<LoginScreenContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
+                    // Back button
+                    IconButton(
+                      onPressed: () => Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HomeApp()),
+                        (route) => false,
+                      ),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    const SizedBox(height: 20),
                     // Logo/App Name
                     Center(
                       child: Column(

@@ -73,7 +73,23 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
+  // Update profile picture
+  Future<void> updateProfilePicture(String path) async {
+    emit(state.copyWith(isLoading: true, error: null));
 
+    try {
+      final updatedUser = await _profileRepository.updateProfilePicture(path);
+      emit(state.copyWith(
+        user: updatedUser,
+        isLoading: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      ));
+    }
+  }
 
   // Logout
   Future<void> logout() async {

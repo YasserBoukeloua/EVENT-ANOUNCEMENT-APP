@@ -6,6 +6,8 @@ import 'package:eventify/screens/post_details/post_details_screen.dart';
 import 'package:eventify/components/top_picks.dart';
 import 'package:eventify/cubits/favorites/favorites_cubit.dart';
 import 'package:eventify/cubits/favorites/favorites_state.dart';
+import 'package:eventify/screens/profile/visible_profile.dart';
+import 'dart:io';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({Key? key}) : super(key: key);
@@ -226,6 +228,36 @@ class EventCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Creator Info
+                      GestureDetector(
+                        onTap: () {
+                          final publisher = event.publisher;
+                          if (publisher != null && publisher.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => VisibleProfilePage(username: publisher),
+                              ),
+                            );
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person, size: 14, color: AppColors.primaryDark),
+                            const SizedBox(width: 4),
+                            Text(
+                              event.publisher ?? 'Unknown',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                                fontFamily: 'JosefinSans',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
                       Text(
                         event.nameOfevent ?? 'Event',
                         style: const TextStyle(
@@ -341,9 +373,8 @@ class EventCard extends StatelessWidget {
   Widget _buildEventImage() {
     // Check if pathToImg is available and valid
     if (event.pathToImg != null && event.pathToImg!.isNotEmpty) {
-      if (event.pathToImg!.startsWith('http') || 
-          event.pathToImg!.startsWith('https') ||
-          event.pathToImg!.startsWith('lib/')) {
+      if (event.pathToImg!.startsWith('lib/assets') || 
+          event.pathToImg!.startsWith('assets/')) {
         return Image.asset(
           event.pathToImg!,
           width: 80,
@@ -353,9 +384,22 @@ class EventCard extends StatelessWidget {
             return _buildPlaceholder();
           },
         );
-      } else if (event.pathToImg!.startsWith('assets/')) {
-        return Image.asset(
+      } else if (event.pathToImg!.startsWith('http') || 
+                 event.pathToImg!.startsWith('https')) {
+        // Handle network images if needed in future
+        return Image.network(
           event.pathToImg!,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildPlaceholder();
+          },
+        );
+      } else {
+        // Assume local file path
+        return Image.file(
+          File(event.pathToImg!),
           width: 80,
           height: 80,
           fit: BoxFit.cover,

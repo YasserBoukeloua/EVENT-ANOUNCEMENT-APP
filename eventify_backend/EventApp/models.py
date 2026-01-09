@@ -248,7 +248,7 @@ class Photo(models.Model):
             models.Index(fields=['content_type', 'event']),
             models.Index(fields=['content_type', 'post']),
         ]
-        constraints = [
+          constraints = [
             models.CheckConstraint(
                 condition=models.Q(event__isnull=False, post__isnull=True) | models.Q(event__isnull=True, post__isnull=False),
                 name='photo_either_event_or_post'
