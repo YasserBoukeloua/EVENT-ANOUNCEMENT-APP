@@ -75,13 +75,20 @@ def getEvent(request, pk):
 def createEvent(request):
     data = request.data
     try:
+        # Get creator - use request.user if authenticated, otherwise use creator ID from data
+        if request.user.is_authenticated:
+            creator = request.user
+        elif 'creator' in data:
+            creator = User.objects.get(id=data['creator'])
+        else:
+            return Response({'error': 'Creator is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
         event = Event.objects.create(
-            creator=request.user,
+            creator=creator,
             title=data['title'],
             description=data['description'],
             date=data['date'],
             location=data['location'],
-            photo_url=data.get('photo_url', '')
         )
         serializer = EventSerializer(event, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
