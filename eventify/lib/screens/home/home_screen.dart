@@ -33,7 +33,11 @@ class _HomeState extends State<Home> {
   final String _userCity = 'Algiers';
 
   // Helper method to build image
-  Widget _buildEventImage(String? imagePath, {required double height, required double width}) {
+  Widget _buildEventImage(
+    String? imagePath, {
+    required double height,
+    required double width,
+  }) {
     if (imagePath == null || imagePath.isEmpty) {
       return Container(
         height: height,
@@ -43,12 +47,37 @@ class _HomeState extends State<Home> {
       );
     }
 
-    if (imagePath.startsWith('lib/assets')) {
+    if (imagePath.startsWith('lib/assets') || imagePath.startsWith('assets/')) {
       return Image.asset(
         imagePath,
         height: height,
         width: width,
         fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: height,
+          width: width,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event),
+        ),
+      );
+    } else if (imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://')) {
+      return Image.network(
+        imagePath,
+        height: height,
+        width: width,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: height,
+            width: width,
+            color: Colors.grey[300],
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
         errorBuilder: (_, __, ___) => Container(
           height: height,
           width: width,
@@ -90,8 +119,11 @@ class _HomeState extends State<Home> {
 
     switch (_selectedFilter) {
       case 'Recent':
-        filtered.sort((a, b) => (b.date ?? DateTime.now())
-            .compareTo(a.date ?? DateTime.now()));
+        // Sort by event date - soonest upcoming events first
+        filtered.sort(
+          (a, b) =>
+              (a.date ?? DateTime.now()).compareTo(b.date ?? DateTime.now()),
+        );
         break;
       case 'Closest':
         filtered.sort((a, b) => distanceScore(a).compareTo(distanceScore(b)));
@@ -100,14 +132,20 @@ class _HomeState extends State<Home> {
       default:
         filtered.sort((a, b) {
           final now = DateTime.now();
-          final aDays =
-              a.date != null ? a.date!.difference(now).inDays.abs() : 365;
-          final bDays =
-              b.date != null ? b.date!.difference(now).inDays.abs() : 365;
+          final aDays = a.date != null
+              ? a.date!.difference(now).inDays.abs()
+              : 365;
+          final bDays = b.date != null
+              ? b.date!.difference(now).inDays.abs()
+              : 365;
           final aScore =
-              (365 - aDays) * 0.4 + (1 - distanceScore(a)) * 0.3 + preferenceScore(a) * 0.3;
+              (365 - aDays) * 0.4 +
+              (1 - distanceScore(a)) * 0.3 +
+              preferenceScore(a) * 0.3;
           final bScore =
-              (365 - bDays) * 0.4 + (1 - distanceScore(b)) * 0.3 + preferenceScore(b) * 0.3;
+              (365 - bDays) * 0.4 +
+              (1 - distanceScore(b)) * 0.3 +
+              preferenceScore(b) * 0.3;
           return bScore.compareTo(aScore);
         });
         break;
@@ -122,7 +160,7 @@ class _HomeState extends State<Home> {
         return name.contains(query) || location.contains(query);
       }).toList();
     }
-    
+
     return filtered;
   }
 
@@ -136,9 +174,7 @@ class _HomeState extends State<Home> {
   void _navigateToEventDetails(BuildContext context, TopPicks event) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => PostDetails(event: event),
-      ),
+      MaterialPageRoute(builder: (context) => PostDetails(event: event)),
     );
   }
 
@@ -160,7 +196,6 @@ class _HomeState extends State<Home> {
       );
     });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +226,6 @@ class _HomeState extends State<Home> {
               children: [
                 // Header Section
                 Container(
-
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     color: AppColors.primaryDark,
@@ -203,7 +237,12 @@ class _HomeState extends State<Home> {
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 30, right: 30, top: 10, bottom: 20),
+                      padding: const EdgeInsets.only(
+                        left: 30,
+                        right: 30,
+                        top: 10,
+                        bottom: 20,
+                      ),
                       child: Column(
                         children: [
                           Row(
@@ -214,18 +253,19 @@ class _HomeState extends State<Home> {
                                   builder: (context, state) {
                                     final isAuthenticated = state.user != null;
                                     String displayName = 'User';
-                                    
+
                                     if (state.user != null) {
-                                      displayName = state.user!.name.isNotEmpty 
-                                          ? state.user!.name 
+                                      displayName = state.user!.name.isNotEmpty
+                                          ? state.user!.name
                                           : state.user!.username;
                                     }
-                                    
+
                                     return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          isAuthenticated 
+                                          isAuthenticated
                                               ? "${AppLanguage.t('home_hello_prefix')} $displayName"
                                               : "Eventify",
                                           style: const TextStyle(
@@ -253,28 +293,36 @@ class _HomeState extends State<Home> {
                               ),
                               Row(
                                 children: [
-                                  BlocBuilder<NotificationsCubit, NotificationsState>(
+                                  BlocBuilder<
+                                    NotificationsCubit,
+                                    NotificationsState
+                                  >(
                                     builder: (context, state) {
                                       int unreadCount = 0;
                                       if (state is NotificationsLoaded) {
                                         unreadCount = state.unreadCount;
                                       }
-                                      
+
                                       return GestureDetector(
                                         onTap: () {
-                                          final user = context.read<ProfileCubit>().state.user;
+                                          final user = context
+                                              .read<ProfileCubit>()
+                                              .state
+                                              .user;
                                           if (user != null) {
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => const NotificationsScreen(),
+                                                builder: (context) =>
+                                                    const NotificationsScreen(),
                                               ),
                                             );
                                           } else {
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => const LoginScreen(),
+                                                builder: (context) =>
+                                                    const LoginScreen(),
                                               ),
                                             );
                                           }
@@ -284,11 +332,20 @@ class _HomeState extends State<Home> {
                                             Container(
                                               width: 50,
                                               height: 50,
-                                              margin: const EdgeInsets.only(right: 10),
+                                              margin: const EdgeInsets.only(
+                                                right: 10,
+                                              ),
                                               decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(30),
-                                                border: Border.all(width: 3, color: Colors.white.withOpacity(0.3)),
-                                                color: Colors.white.withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(30),
+                                                border: Border.all(
+                                                  width: 3,
+                                                  color: Colors.white
+                                                      .withOpacity(0.3),
+                                                ),
+                                                color: Colors.white.withOpacity(
+                                                  0.1,
+                                                ),
                                               ),
                                               child: const Icon(
                                                 Icons.notifications_outlined,
@@ -301,21 +358,29 @@ class _HomeState extends State<Home> {
                                                 right: 10,
                                                 top: 0,
                                                 child: Container(
-                                                  padding: const EdgeInsets.all(4),
-                                                  decoration: const BoxDecoration(
-                                                    color: Colors.red,
-                                                    shape: BoxShape.circle,
+                                                  padding: const EdgeInsets.all(
+                                                    4,
                                                   ),
-                                                  constraints: const BoxConstraints(
-                                                    minWidth: 16,
-                                                    minHeight: 16,
-                                                  ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: Colors.red,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                        minWidth: 16,
+                                                        minHeight: 16,
+                                                      ),
                                                   child: Text(
-                                                    unreadCount > 9 ? '9+' : unreadCount.toString(),
+                                                    unreadCount > 9
+                                                        ? '9+'
+                                                        : unreadCount
+                                                              .toString(),
                                                     style: const TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                     textAlign: TextAlign.center,
                                                   ),
@@ -330,8 +395,9 @@ class _HomeState extends State<Home> {
                               ),
                               BlocBuilder<ProfileCubit, ProfileState>(
                                 builder: (context, profileState) {
-                                  final isAuthenticated = profileState.user != null;
-                                  
+                                  final isAuthenticated =
+                                      profileState.user != null;
+
                                   return GestureDetector(
                                     onTap: () {
                                       if (isAuthenticated) {
@@ -341,7 +407,10 @@ class _HomeState extends State<Home> {
                                         // Guest user - redirect to login screen
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const LoginScreen(),
+                                          ),
                                         );
                                       }
                                     },
@@ -350,10 +419,13 @@ class _HomeState extends State<Home> {
                                       height: 50,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(width: 3, color: Colors.white),
+                                        border: Border.all(
+                                          width: 3,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                       child: Icon(
-                                        isAuthenticated 
+                                        isAuthenticated
                                             ? Icons.person_outline_outlined
                                             : Icons.login,
                                         color: Colors.white,
@@ -367,7 +439,10 @@ class _HomeState extends State<Home> {
                           ),
                           const SizedBox(height: 25),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 22,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.backgroundSearch,
                               borderRadius: BorderRadius.circular(30),
@@ -383,15 +458,21 @@ class _HomeState extends State<Home> {
                                       });
                                     },
                                     decoration: InputDecoration(
-                                      hintText: AppLanguage.t('home_search_hint'),
+                                      hintText: AppLanguage.t(
+                                        'home_search_hint',
+                                      ),
                                       hintStyle: const TextStyle(
-                                          color: Colors.white,
-                                          fontFamily: 'JosefinSans'),
+                                        color: Colors.white,
+                                        fontFamily: 'JosefinSans',
+                                      ),
                                       border: InputBorder.none,
                                       isDense: true,
                                       contentPadding: EdgeInsets.zero,
                                     ),
-                                    style: const TextStyle(color: Colors.white, fontFamily: 'JosefinSans'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontFamily: 'JosefinSans',
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -417,12 +498,17 @@ class _HomeState extends State<Home> {
                     child: Center(
                       child: Column(
                         children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
                           const SizedBox(height: 10),
                           Text('Error loading events: $error'),
                           const SizedBox(height: 10),
                           ElevatedButton(
-                            onPressed: () => context.read<EventsCubit>().refreshEvents(),
+                            onPressed: () =>
+                                context.read<EventsCubit>().refreshEvents(),
                             child: const Text('Retry'),
                           ),
                         ],
@@ -451,14 +537,25 @@ class _HomeState extends State<Home> {
                         ? const Center(child: Text('No events available'))
                         : ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-                            itemCount: allEvents.length,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 15,
+                            ),
+                            itemCount: allEvents.length > 3
+                                ? 3
+                                : allEvents.length,
                             itemBuilder: (context, i) {
                               final event = allEvents[i];
+                              final displayCount = allEvents.length > 3
+                                  ? 3
+                                  : allEvents.length;
                               return GestureDetector(
-                                onTap: () => _navigateToEventDetails(context, event),
+                                onTap: () =>
+                                    _navigateToEventDetails(context, event),
                                 child: Container(
-                                  margin: EdgeInsets.only(right: i == allEvents.length - 1 ? 0 : 15),
+                                  margin: EdgeInsets.only(
+                                    right: i == displayCount - 1 ? 0 : 15,
+                                  ),
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -478,12 +575,16 @@ class _HomeState extends State<Home> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Text(
                                               event.date != null
-                                                  ? DateFormat('dd/MM/yyyy').format(event.date!)
+                                                  ? DateFormat(
+                                                      'dd/MM/yyyy',
+                                                    ).format(event.date!)
                                                   : 'TBD',
                                               style: const TextStyle(
                                                 color: AppColors.accent,
@@ -513,8 +614,10 @@ class _HomeState extends State<Home> {
                                                 const SizedBox(width: 2),
                                                 Expanded(
                                                   child: Text(
-                                                    event.location ?? 'Location',
-                                                    overflow: TextOverflow.ellipsis,
+                                                    event.location ??
+                                                        'Location',
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                       color: AppColors.accent,
@@ -536,7 +639,11 @@ class _HomeState extends State<Home> {
 
                   // Top Picks Header
                   Padding(
-                    padding: const EdgeInsets.only(top: 10, left: 15, right: 15),
+                    padding: const EdgeInsets.only(
+                      top: 10,
+                      left: 15,
+                      right: 15,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -613,12 +720,18 @@ class _HomeState extends State<Home> {
                       : ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(left: 15, right: 15, top: 15, bottom: 100),
+                          padding: const EdgeInsets.only(
+                            left: 15,
+                            right: 15,
+                            top: 15,
+                            bottom: 100,
+                          ),
                           itemCount: filteredEvents.length,
                           itemBuilder: (context, i) {
                             final event = filteredEvents[i];
                             return GestureDetector(
-                              onTap: () => _navigateToEventDetails(context, event),
+                              onTap: () =>
+                                  _navigateToEventDetails(context, event),
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 15),
                                 padding: const EdgeInsets.all(8),
@@ -640,37 +753,55 @@ class _HomeState extends State<Home> {
                                     Padding(
                                       padding: const EdgeInsets.all(10),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 // Creator Info
                                                 GestureDetector(
                                                   onTap: () {
-                                                    final publisher = event.publisher;
-                                                    if (publisher != null && publisher.isNotEmpty) {
+                                                    final publisher =
+                                                        event.publisher;
+                                                    if (publisher != null &&
+                                                        publisher.isNotEmpty) {
                                                       Navigator.push(
                                                         context,
                                                         MaterialPageRoute(
-                                                          builder: (context) => VisibleProfilePage(username: publisher),
+                                                          builder: (context) =>
+                                                              VisibleProfilePage(
+                                                                username:
+                                                                    publisher,
+                                                              ),
                                                         ),
                                                       );
                                                     }
                                                   },
                                                   child: Row(
                                                     children: [
-                                                      const Icon(Icons.person, size: 14, color: AppColors.primaryDark),
+                                                      const Icon(
+                                                        Icons.person,
+                                                        size: 14,
+                                                        color: AppColors
+                                                            .primaryDark,
+                                                      ),
                                                       const SizedBox(width: 4),
                                                       Text(
-                                                        event.publisher ?? 'Unknown',
+                                                        event.publisher ??
+                                                            'Unknown',
                                                         style: const TextStyle(
                                                           fontSize: 12,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: AppColors.primaryDark,
-                                                          fontFamily: 'JosefinSans',
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: AppColors
+                                                              .primaryDark,
+                                                          fontFamily:
+                                                              'JosefinSans',
                                                         ),
                                                       ),
                                                     ],
@@ -680,7 +811,8 @@ class _HomeState extends State<Home> {
                                                 Text(
                                                   event.nameOfevent ?? 'Event',
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   style: const TextStyle(
                                                     color: Colors.black,
                                                     fontSize: 14,
@@ -691,7 +823,9 @@ class _HomeState extends State<Home> {
                                                 const SizedBox(height: 4),
                                                 Text(
                                                   event.date != null
-                                                      ? DateFormat('dd MMM. yyyy').format(event.date!)
+                                                      ? DateFormat(
+                                                          'dd MMM. yyyy',
+                                                        ).format(event.date!)
                                                       : 'TBD',
                                                   style: const TextStyle(
                                                     color: AppColors.accent,
@@ -751,24 +885,17 @@ class _HomeState extends State<Home> {
       onPressed: () => _onFilterChanged(filter),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: isActive
-            ? AppColors.accent
-            : Colors.black,
+        foregroundColor: isActive ? AppColors.accent : Colors.black,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 18),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(fontFamily: 'JosefinSans'),
-          ),
+          Text(label, style: const TextStyle(fontFamily: 'JosefinSans')),
         ],
       ),
     );

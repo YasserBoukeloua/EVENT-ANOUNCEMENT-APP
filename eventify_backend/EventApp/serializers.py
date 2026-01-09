@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Event, User, Post, Comment, Photo, EventFavorite
+from .models import Event, User, Post, Comment, Photo, EventFavorite, Repost
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -58,5 +58,14 @@ class EventFavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventFavorite
         fields = '__all__'
+
+
+class RepostSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    event = EventSerializer(read_only=True)
+
+    class Meta:
+        model = Repost
+        fields = ['id', 'user', 'event', 'caption', 'created_at']
 
 

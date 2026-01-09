@@ -18,10 +18,19 @@ class EventRepository extends EventRepositoryBase {
       }
     }
 
-    // Get first photo if available
+    // Get first photo if available - construct full URL
     String? photoPath;
     if (record['photos'] != null && (record['photos'] as List).isNotEmpty) {
-      photoPath = record['photos'][0]['image'];
+      final imagePath = record['photos'][0]['image'];
+      if (imagePath != null && imagePath.toString().isNotEmpty) {
+        // If it's already a full URL, use it directly
+        if (imagePath.toString().startsWith('http')) {
+          photoPath = imagePath.toString();
+        } else {
+          // Otherwise, prepend the base URL
+          photoPath = '${ApiService.baseUrl}$imagePath';
+        }
+      }
     }
 
     return TopPicks(
@@ -161,18 +170,16 @@ class EventRepository extends EventRepositoryBase {
       final data = {
         'title': title,
         'description': description,
-        'date': date.toIso8601String(),
+        'date': date.toIso8601String().split('T')[0],
         'location': location,
-        'category': category,
-        'publisher': publisher,
-        'is_free': isFree ? 1 : 0,
-        'photo_path': photoPath,
         'registration_link': registrationLink,
-        'created_at': DateTime.now().toIso8601String(),
       };
-      
-      final id = await _dbEvents.insertRecordGetId(data);
-      return id > 0 ? id : null;
+
+      final result = await _apiService.createEvent(data);
+      if (result != null && result['id'] != null) {
+        return result['id'];
+      }
+      return null;
     } catch (e) {
       print('Create event error: $e');
       return null;

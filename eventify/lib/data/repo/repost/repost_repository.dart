@@ -1,34 +1,60 @@
 import 'package:eventify/components/top_picks.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:eventify/data/databases/db_repost.dart';
-import 'package:eventify/data/databases/dbhelper.dart';
+import 'package:eventify/services/api_service.dart';
 import 'repost_repo_abstract.dart';
 
 class RepostRepository extends RepostRepositoryBase {
-  final _dbReposts = DBRepostsTable();
+  final _apiService = ApiService();
 
-  // Convert database record to TopPicks
+  // Convert API record to TopPicks
   TopPicks _convertToTopPicks(Map<String, dynamic> record) {
+    final event = record['event'];
+    if (event == null) {
+      return TopPicks(
+        record['id'],
+        null,
+        'Event',
+        null,
+        '',
+        record['user']?['username'] ?? 'User',
+        true,
+        'Repost',
+      );
+    }
+
+    // Get first photo if available - construct full URL
+    String? photoPath;
+    if (event['photos'] != null && (event['photos'] as List).isNotEmpty) {
+      final imagePath = event['photos'][0]['image'];
+      if (imagePath != null && imagePath.toString().isNotEmpty) {
+        if (imagePath.toString().startsWith('http')) {
+          photoPath = imagePath.toString();
+        } else {
+          photoPath = '${ApiService.baseUrl}$imagePath';
+        }
+      }
+    }
+
     return TopPicks(
-      record['id'],
-      record['event_date'] != null
-          ? DateTime.parse(record['event_date'])
-          : null,
-      record['event_title'] ?? 'Event',
-      record['event_photo_path'] ?? '',
-      record['event_location'] ?? '',
-      record['event_publisher'] ?? 'User',
-      record['event_is_free'] == 1,
-      record['event_category'] ?? 'Repost',
-      description: record['event_description'],
+      event['id'],
+      event['date'] != null ? DateTime.parse(event['date']) : null,
+      event['title'] ?? 'Event',
+      photoPath,
+      event['location'] ?? '',
+      record['user']?['username'] ?? event['creator']?['username'] ?? 'User',
+      true,
+      'Repost',
+      description: event['description'],
+      registrationLink: event['registration_link'],
     );
   }
 
   @override
   Future<List<TopPicks>> getReposts(int userId) async {
     try {
-      final results = await _dbReposts.getRepostsByUser(userId);
-      return results.map((record) => _convertToTopPicks(record)).toList();
+      final results = await _apiService.getRepostsByUser(userId);
+      return results
+          .map((record) => _convertToTopPicks(record as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       print('Get reposts error: $e');
       return [];
@@ -38,8 +64,10 @@ class RepostRepository extends RepostRepositoryBase {
   @override
   Future<List<TopPicks>> getAllReposts() async {
     try {
-      final results = await _dbReposts.getAllReposts();
-      return results.map((record) => _convertToTopPicks(record)).toList();
+      final results = await _apiService.getReposts();
+      return results
+          .map((record) => _convertToTopPicks(record as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       print('Get all reposts error: $e');
       return [];
@@ -50,18 +78,13 @@ class RepostRepository extends RepostRepositoryBase {
   Future<bool> addRepost(int userId, int eventId, {String? caption}) async {
     try {
       // Check if already reposted
-      final hasReposted = await _dbReposts.hasReposted(userId, eventId);
-      if (hasReposted) {
+      final alreadyReposted = await _apiService.hasReposted(userId, eventId);
+      if (alreadyReposted) {
         return false;
       }
 
-      // Save repost with user ID
-      return await _dbReposts.insertRecord({
-        'event_id': eventId,
-        'user_id': userId, // This is the current logged-in user ID
-        'caption': caption,
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      await _apiService.createRepost(userId, eventId, caption: caption);
+      return true;
     } catch (e) {
       print('Add repost error: $e');
       return false;
@@ -71,7 +94,7 @@ class RepostRepository extends RepostRepositoryBase {
   @override
   Future<bool> removeRepost(int userId, int eventId) async {
     try {
-      return await _dbReposts.removeRepost(userId, eventId);
+      return await _apiService.removeRepost(userId, eventId);
     } catch (e) {
       print('Remove repost error: $e');
       return false;
@@ -81,7 +104,7 @@ class RepostRepository extends RepostRepositoryBase {
   @override
   Future<bool> hasReposted(int userId, int eventId) async {
     try {
-      return await _dbReposts.hasReposted(userId, eventId);
+      return await _apiService.hasReposted(userId, eventId);
     } catch (e) {
       print('Check repost error: $e');
       return false;

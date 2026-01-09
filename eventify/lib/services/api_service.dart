@@ -179,4 +179,43 @@ class ApiService {
   Future<dynamic> getPhoto(int id) async {
     return await get('/photos/$id/');
   }
+
+  // ========== REPOST ENDPOINTS ==========
+
+  Future<List<dynamic>> getReposts() async {
+    return await get('/reposts/');
+  }
+
+  Future<List<dynamic>> getRepostsByUser(int userId) async {
+    return await get('/reposts/user/$userId/');
+  }
+
+  Future<dynamic> getRepost(int id) async {
+    return await get('/reposts/$id/');
+  }
+
+  Future<dynamic> createRepost(
+    int userId,
+    int eventId, {
+    String? caption,
+  }) async {
+    return await post('/reposts/create/', {
+      'user_id': userId,
+      'event_id': eventId,
+      'caption': caption ?? '',
+    });
+  }
+
+  Future<bool> deleteRepost(int id) async {
+    return await delete('/reposts/$id/delete/');
+  }
+
+  Future<bool> removeRepost(int userId, int eventId) async {
+    return await delete('/reposts/remove/$userId/$eventId/');
+  }
+
+  Future<bool> hasReposted(int userId, int eventId) async {
+    final response = await get('/reposts/check/$userId/$eventId/');
+    return response['reposted'] ?? false;
+  }
 }

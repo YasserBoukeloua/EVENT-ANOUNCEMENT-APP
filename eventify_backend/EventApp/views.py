@@ -13,9 +13,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import (
     EventSerializer, UserSerializer, PostSerializer,
-    CommentSerializer, EventFavoriteSerializer, PhotoSerializer
+    CommentSerializer, EventFavoriteSerializer, PhotoSerializer, RepostSerializer
 )
-from .models import Event, User, Post, Comment, EventFavorite, Photo
+from .models import Event, User, Post, Comment, EventFavorite, Photo, Repost
 @api_view(['GET'])
 def getRoutes(request):
     routes = [
@@ -470,3 +470,96 @@ def deletePhoto(request, pk):
         return Response({'message': 'Photo deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Photo.DoesNotExist:
         return Response({'error': 'Photo not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ============ REPOST VIEWS ============
+
+@api_view(['GET'])
+def getReposts(request):
+    """Get all reposts"""
+    reposts = Repost.objects.all().order_by('-created_at')
+    serializer = RepostSerializer(reposts, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def getRepostsByUser(request, user_id):
+    """Get reposts by user"""
+    reposts = Repost.objects.filter(user_id=user_id).order_by('-created_at')
+    serializer = RepostSerializer(reposts, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def getRepost(request, pk):
+    """Get single repost"""
+    try:
+        repost = Repost.objects.get(id=pk)
+        serializer = RepostSerializer(repost, context={'request': request})
+        return Response(serializer.data)
+    except Repost.DoesNotExist:
+        return Response({'error': 'Repost not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+def createRepost(request):
+    """Create a repost"""
+    try:
+        data = request.data
+        user_id = data.get('user_id')
+        event_id = data.get('event_id')
+        caption = data.get('caption', '')
+        
+        if not user_id or not event_id:
+            return Response({'error': 'user_id and event_id are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already reposted
+        if Repost.objects.filter(user_id=user_id, event_id=event_id).exists():
+            return Response({'error': 'Already reposted this event'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.get(id=user_id)
+        event = Event.objects.get(id=event_id)
+        
+        repost = Repost.objects.create(
+            user=user,
+            event=event,
+            caption=caption
+        )
+        
+        serializer = RepostSerializer(repost, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Event.DoesNotExist:
+        return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+def deleteRepost(request, pk):
+    """Delete a repost"""
+    try:
+        repost = Repost.objects.get(id=pk)
+        repost.delete()
+        return Response({'message': 'Repost deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Repost.DoesNotExist:
+        return Response({'error': 'Repost not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['DELETE'])
+def removeRepostByUserEvent(request, user_id, event_id):
+    """Remove repost by user and event"""
+    try:
+        repost = Repost.objects.get(user_id=user_id, event_id=event_id)
+        repost.delete()
+        return Response({'message': 'Repost removed successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Repost.DoesNotExist:
+        return Response({'error': 'Repost not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+def hasReposted(request, user_id, event_id):
+    """Check if user has reposted an event"""
+    exists = Repost.objects.filter(user_id=user_id, event_id=event_id).exists()
+    return Response({'reposted': exists})

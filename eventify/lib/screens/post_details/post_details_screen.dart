@@ -61,6 +61,117 @@ class _PostDetailsState extends State<PostDetails> {
     super.dispose();
   }
 
+  Widget _buildDetailImage() {
+    final imagePath = widget.event.pathToImg;
+
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        color: Colors.grey[800],
+        child: const Center(
+          child: Icon(Icons.event, size: 80, color: Colors.white54),
+        ),
+      );
+    }
+
+    if (imagePath.startsWith('lib/assets') || imagePath.startsWith('assets/')) {
+      return Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.grey[800],
+          child: const Center(
+            child: Icon(Icons.event, size: 80, color: Colors.white54),
+          ),
+        ),
+      );
+    } else if (imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://')) {
+      return Image.network(
+        imagePath,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.grey[800],
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        },
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.grey[800],
+          child: const Center(
+            child: Icon(Icons.event, size: 80, color: Colors.white54),
+          ),
+        ),
+      );
+    } else {
+      return Image.file(
+        File(imagePath),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.grey[800],
+          child: const Center(
+            child: Icon(Icons.event, size: 80, color: Colors.white54),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildSmallEventImage() {
+    final imagePath = widget.event.pathToImg;
+
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        width: 80,
+        height: 80,
+        color: Colors.grey[300],
+        child: const Icon(Icons.event, size: 32),
+      );
+    }
+
+    if (imagePath.startsWith('lib/assets') || imagePath.startsWith('assets/')) {
+      return Image.asset(
+        imagePath,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, size: 32),
+        ),
+      );
+    } else if (imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://')) {
+      return Image.network(
+        imagePath,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, size: 32),
+        ),
+      );
+    } else {
+      return Image.file(
+        File(imagePath),
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, size: 32),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,27 +207,7 @@ class _PostDetailsState extends State<PostDetails> {
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
         clipBehavior: Clip.hardEdge,
-        child: (widget.event.pathToImg != null && !widget.event.pathToImg!.startsWith('lib/assets'))
-            ? Image.file(
-                File(widget.event.pathToImg!),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[800],
-                  child: const Center(
-                    child: Icon(Icons.event, size: 80, color: Colors.white54),
-                  ),
-                ),
-              )
-            : Image.asset(
-                widget.event.pathToImg ?? 'lib/assets/event1.webp',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[800],
-                  child: const Center(
-                    child: Icon(Icons.event, size: 80, color: Colors.white54),
-                  ),
-                ),
-              ),
+        child: _buildDetailImage(),
       ),
       Positioned(
         top: 35,
@@ -562,25 +653,30 @@ class _PostDetailsState extends State<PostDetails> {
     // Check login status using ProfileCubit (more reliable for UI state)
     final profileState = context.read<ProfileCubit>().state;
     final isLoggedIn = profileState.user != null;
-    
+
     if (!isLoggedIn) {
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Login Required',
-              style: TextStyle(fontFamily: 'InterTight')),
-          content: const Text('You have to log in to repost events.',
-              style: TextStyle(fontFamily: 'InterTight')),
+          title: const Text(
+            'Login Required',
+            style: TextStyle(fontFamily: 'InterTight'),
+          ),
+          content: const Text(
+            'You have to log in to repost events.',
+            style: TextStyle(fontFamily: 'InterTight'),
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel',
-                  style: TextStyle(
-                      fontFamily: 'InterTight', color: Colors.grey)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontFamily: 'InterTight', color: Colors.grey),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -590,11 +686,14 @@ class _PostDetailsState extends State<PostDetails> {
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
                 );
               },
-              child: const Text('Login',
-                  style: TextStyle(
-                      fontFamily: 'InterTight',
-                      color: AppColors.primaryDark,
-                      fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Login',
+                style: TextStyle(
+                  fontFamily: 'InterTight',
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -713,6 +812,61 @@ class _CreateRepostScreenState extends State<CreateRepostScreen> {
     super.dispose();
   }
 
+  Widget _buildSmallEventImage() {
+    final imagePath = widget.event.pathToImg;
+
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        width: 80,
+        height: 80,
+        color: Colors.grey[300],
+        child: const Icon(Icons.event, size: 32),
+      );
+    }
+
+    if (imagePath.startsWith('lib/assets') || imagePath.startsWith('assets/')) {
+      return Image.asset(
+        imagePath,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, size: 32),
+        ),
+      );
+    } else if (imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://')) {
+      return Image.network(
+        imagePath,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, size: 32),
+        ),
+      );
+    } else {
+      return Image.file(
+        File(imagePath),
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, size: 32),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -767,25 +921,15 @@ class _CreateRepostScreenState extends State<CreateRepostScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Event Image
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        image: DecorationImage(
-                          image: (widget.event.pathToImg != null &&
-                                  !widget.event.pathToImg!
-                                      .startsWith('lib/assets'))
-                              ? FileImage(File(widget.event.pathToImg!))
-                                  as ImageProvider
-                              : AssetImage(
-                                  widget.event.pathToImg ??
-                                      'lib/assets/event1.webp',
-                                ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    clipBehavior: Clip.hardEdge,
+                    child: _buildSmallEventImage(),
+                  ),
                   const SizedBox(width: 16),
 
                   // Event Info
@@ -1007,8 +1151,9 @@ class _CreateRepostScreenState extends State<CreateRepostScreen> {
       // Trigger notification
       // Get user name for notification
       final profileState = context.read<ProfileCubit>().state;
-      final userName = profileState.user?.name ?? profileState.user?.username ?? 'Someone';
-      
+      final userName =
+          profileState.user?.name ?? profileState.user?.username ?? 'Someone';
+
       await NotificationService().notifyRepost(
         widget.event.id,
         userId,

@@ -50,4 +50,13 @@ urlpatterns =[
     path('photos/create/', views.createPhoto),
     path('photos/<str:pk>/', views.getPhoto),
     path('photos/<str:pk>/delete/', views.deletePhoto),
+    
+    # Repost URLs
+    path('reposts/', views.getReposts),
+    path('reposts/create/', views.createRepost),
+    path('reposts/user/<str:user_id>/', views.getRepostsByUser),
+    path('reposts/check/<str:user_id>/<str:event_id>/', views.hasReposted),
+    path('reposts/<str:pk>/', views.getRepost),
+    path('reposts/<str:pk>/delete/', views.deleteRepost),
+    path('reposts/remove/<str:user_id>/<str:event_id>/', views.removeRepostByUserEvent),
 ]

@@ -248,7 +248,7 @@ class Photo(models.Model):
             models.Index(fields=['content_type', 'event']),
             models.Index(fields=['content_type', 'post']),
         ]
-          constraints = [
+        constraints = [
             models.CheckConstraint(
                 condition=models.Q(event__isnull=False, post__isnull=True) | models.Q(event__isnull=True, post__isnull=False),
                 name='photo_either_event_or_post'
@@ -270,3 +270,35 @@ class Photo(models.Model):
             if count >= 10 and not self.id:
                 raise ValueError(f"Cannot add more than 10 photos to a post")
         super().save(*args, **kwargs)
+
+
+class Repost(models.Model):
+    """Repost model for sharing events"""
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reposts',
+        db_column='user_id'
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='reposts',
+        db_column='event_id'
+    )
+    caption = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'reposts'
+        unique_together = ['user', 'event']
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['event']),
+            models.Index(fields=['-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} reposted {self.event.title}"
