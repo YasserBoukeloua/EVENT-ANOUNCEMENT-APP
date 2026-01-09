@@ -5,6 +5,10 @@ import 'event_repo_abstract.dart';
 class EventRepository extends EventRepositoryBase {
   final _apiService = ApiService();
 
+  // Placeholder image URL for events without photos
+  static const String _placeholderImage =
+      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80';
+
   // Convert API record to TopPicks model
   TopPicks _convertToTopPicks(Map<String, dynamic> record) {
     // Get creator name from nested creator object
@@ -36,6 +40,9 @@ class EventRepository extends EventRepositoryBase {
         }
       }
     }
+
+    // Use placeholder if no photo available
+    photoPath ??= _placeholderImage;
 
     return TopPicks(
       record['id'],

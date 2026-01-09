@@ -134,13 +134,13 @@ def deleteEvent(request, pk):
 @api_view(['GET'])
 def getUsers(request ):
     users = User.objects.all()
-    serializer = UserSerializer(users, many=True)
+    serializer = UserSerializer(users, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['GET'])
 def getUser(request , pk):
     user = User.objects.get(id=pk)
-    serializer = UserSerializer(user, many=False)
+    serializer = UserSerializer(user, many=False, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['POST'])
@@ -162,7 +162,7 @@ def createUser(request):
             lastname=data.get('lastname', ''),
             date_of_birth=data.get('date_of_birth', None)
         )
-        serializer = UserSerializer(user, many=False)
+        serializer = UserSerializer(user, many=False, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except KeyError as e:
         return Response({'error': f'Missing required field: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
@@ -183,7 +183,7 @@ def updateUser(request, pk):
     password = data.pop('password', None)
 
 
-    serializer = UserSerializer(user, data=data, partial=True)
+    serializer = UserSerializer(user, data=data, partial=True, context={'request': request})
     if serializer.is_valid():
         serializer.save()
 
@@ -214,7 +214,7 @@ def deleteUser(request, pk):
 @api_view(['GET'])
 def getPosts(request):
     posts = Post.objects.all().order_by('-created_at')
-    serializer = PostSerializer(posts, many=True)
+    serializer = PostSerializer(posts, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -222,7 +222,7 @@ def getPosts(request):
 def getPost(request, pk):
     try:
         post = Post.objects.get(id=pk)
-        serializer = PostSerializer(post, many=False)
+        serializer = PostSerializer(post, many=False, context={'request': request})
         return Response(serializer.data)
     except Post.DoesNotExist:
         return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -244,7 +244,7 @@ def createPost(request):
             event_id=data.get('event_id', None),
             content=data['content']
         )
-        serializer = PostSerializer(post, many=False)
+        serializer = PostSerializer(post, many=False, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
