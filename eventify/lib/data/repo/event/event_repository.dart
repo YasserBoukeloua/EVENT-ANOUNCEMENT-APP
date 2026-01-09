@@ -1,21 +1,38 @@
 import 'package:eventify/components/top_picks.dart';
-import 'package:eventify/data/databases/db_events.dart';
+import 'package:eventify/services/api_service.dart';
 import 'event_repo_abstract.dart';
 
 class EventRepository extends EventRepositoryBase {
-  final _dbEvents = DBEventsTable();
+  final _apiService = ApiService();
 
-  // Convert database record to TopPicks model
+  // Convert API record to TopPicks model
   TopPicks _convertToTopPicks(Map<String, dynamic> record) {
+    // Get creator name from nested creator object
+    String publisher = 'Unknown';
+    if (record['creator'] != null) {
+      if (record['creator'] is Map) {
+        publisher =
+            record['creator']['username'] ??
+            record['creator']['name'] ??
+            'Unknown';
+      }
+    }
+
+    // Get first photo if available
+    String? photoPath;
+    if (record['photos'] != null && (record['photos'] as List).isNotEmpty) {
+      photoPath = record['photos'][0]['image'];
+    }
+
     return TopPicks(
       record['id'],
       record['date'] != null ? DateTime.parse(record['date']) : null,
       record['title'],
-      record['photo_path'],
+      photoPath,
       record['location'],
-      record['publisher'],
-      record['is_free'] == 1,
-      record['category'],
+      publisher,
+      true, // Default to free
+      'General', // Default category
       description: record['description'],
     );
   }
@@ -23,7 +40,7 @@ class EventRepository extends EventRepositoryBase {
   @override
   Future<List<TopPicks>> getEvents() async {
     try {
-      final records = await _dbEvents.getRecords();
+      final records = await _apiService.getEvents();
       return records.map((record) => _convertToTopPicks(record)).toList();
     } catch (e) {
       print('Get events error: $e');
@@ -34,8 +51,8 @@ class EventRepository extends EventRepositoryBase {
   @override
   Future<TopPicks?> getEventById(int id) async {
     try {
-      final record = await _dbEvents.getRecordById(id);
-      
+      final record = await _apiService.getEvent(id);
+
       if (record == null) {
         return null;
       }
@@ -51,7 +68,7 @@ class EventRepository extends EventRepositoryBase {
   Future<List<TopPicks>> searchEvents(String query) async {
     try {
       final events = await getEvents();
-      
+
       if (query.isEmpty) {
         return events;
       }
@@ -60,7 +77,8 @@ class EventRepository extends EventRepositoryBase {
       return events.where((event) {
         final name = (event.nameOfevent ?? '').toLowerCase();
         final location = (event.location ?? '').toLowerCase();
-        return name.contains(lowercaseQuery) || location.contains(lowercaseQuery);
+        return name.contains(lowercaseQuery) ||
+            location.contains(lowercaseQuery);
       }).toList();
     } catch (e) {
       print('Search events error: $e');
@@ -88,8 +106,10 @@ class EventRepository extends EventRepositoryBase {
 
       switch (filter) {
         case 'Recent':
-          events.sort((a, b) =>
-              (b.date ?? DateTime.now()).compareTo(a.date ?? DateTime.now()));
+          events.sort(
+            (a, b) =>
+                (b.date ?? DateTime.now()).compareTo(a.date ?? DateTime.now()),
+          );
           break;
         case 'Closest':
           events.sort((a, b) => _distanceScore(a).compareTo(_distanceScore(b)));
@@ -98,10 +118,20 @@ class EventRepository extends EventRepositoryBase {
         default:
           events.sort((a, b) {
             final now = DateTime.now();
-            final aDays = a.date != null ? a.date!.difference(now).inDays.abs() : 365;
-            final bDays = b.date != null ? b.date!.difference(now).inDays.abs() : 365;
-            final aScore = (365 - aDays) * 0.4 + (1 - _distanceScore(a)) * 0.3 + _preferenceScore(a) * 0.3;
-            final bScore = (365 - bDays) * 0.4 + (1 - _distanceScore(b)) * 0.3 + _preferenceScore(b) * 0.3;
+            final aDays = a.date != null
+                ? a.date!.difference(now).inDays.abs()
+                : 365;
+            final bDays = b.date != null
+                ? b.date!.difference(now).inDays.abs()
+                : 365;
+            final aScore =
+                (365 - aDays) * 0.4 +
+                (1 - _distanceScore(a)) * 0.3 +
+                _preferenceScore(a) * 0.3;
+            final bScore =
+                (365 - bDays) * 0.4 +
+                (1 - _distanceScore(b)) * 0.3 +
+                _preferenceScore(b) * 0.3;
             return bScore.compareTo(aScore);
           });
           break;
