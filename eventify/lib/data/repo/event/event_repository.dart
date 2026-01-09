@@ -26,6 +26,10 @@ class EventRepository extends EventRepositoryBase {
         // If it's already a full URL, use it directly
         if (imagePath.toString().startsWith('http')) {
           photoPath = imagePath.toString();
+          // Convert http to https for secure connection
+          if (photoPath.startsWith('http://')) {
+            photoPath = photoPath.replaceFirst('http://', 'https://');
+          }
         } else {
           // Otherwise, prepend the base URL
           photoPath = '${ApiService.baseUrl}$imagePath';

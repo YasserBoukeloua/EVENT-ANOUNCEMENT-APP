@@ -51,7 +51,11 @@ class FavoritesScreen extends StatelessWidget {
                         count = state.favorites.length;
                       }
                       return Padding(
-                        padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 20.0),
+                        padding: const EdgeInsets.only(
+                          left: 24.0,
+                          right: 24.0,
+                          bottom: 20.0,
+                        ),
                         child: Text(
                           '$count ${count != 1 ? AppLanguage.t('favorites_events') : AppLanguage.t('favorites_event')}',
                           style: const TextStyle(
@@ -94,7 +98,11 @@ class FavoritesScreen extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                          const Icon(
+                            Icons.error_outline,
+                            size: 60,
+                            color: Colors.red,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Error loading favorites',
@@ -154,7 +162,9 @@ class FavoritesScreen extends StatelessWidget {
                         return EventCard(
                           event: favorite,
                           onRemove: () {
-                            context.read<FavoritesCubit>().removeFavorite(favorite.id);
+                            context.read<FavoritesCubit>().removeFavorite(
+                              favorite.id,
+                            );
                           },
                         );
                       },
@@ -176,11 +186,8 @@ class EventCard extends StatelessWidget {
   final TopPicks event;
   final VoidCallback onRemove;
 
-  const EventCard({
-    Key? key,
-    required this.event,
-    required this.onRemove,
-  }) : super(key: key);
+  const EventCard({Key? key, required this.event, required this.onRemove})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -205,9 +212,7 @@ class EventCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => PostDetails(
-                  event: event,
-                ),
+                builder: (context) => PostDetails(event: event),
               ),
             );
           },
@@ -236,14 +241,19 @@ class EventCard extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VisibleProfilePage(username: publisher),
+                                builder: (context) =>
+                                    VisibleProfilePage(username: publisher),
                               ),
                             );
                           }
                         },
                         child: Row(
                           children: [
-                            const Icon(Icons.person, size: 14, color: AppColors.primaryDark),
+                            const Icon(
+                              Icons.person,
+                              size: 14,
+                              color: AppColors.primaryDark,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               event.publisher ?? 'Unknown',
@@ -316,9 +326,12 @@ class EventCard extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: event.isFree 
+                              color: event.isFree
                                   ? Colors.green.withOpacity(0.1)
                                   : Colors.orange.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -328,13 +341,18 @@ class EventCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: event.isFree ? Colors.green : Colors.orange,
+                                color: event.isFree
+                                    ? Colors.green
+                                    : Colors.orange,
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.primaryDark.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -373,7 +391,7 @@ class EventCard extends StatelessWidget {
   Widget _buildEventImage() {
     // Check if pathToImg is available and valid
     if (event.pathToImg != null && event.pathToImg!.isNotEmpty) {
-      if (event.pathToImg!.startsWith('lib/assets') || 
+      if (event.pathToImg!.startsWith('lib/assets') ||
           event.pathToImg!.startsWith('assets/')) {
         return Image.asset(
           event.pathToImg!,
@@ -384,11 +402,15 @@ class EventCard extends StatelessWidget {
             return _buildPlaceholder();
           },
         );
-      } else if (event.pathToImg!.startsWith('http') || 
-                 event.pathToImg!.startsWith('https')) {
-        // Handle network images if needed in future
+      } else if (event.pathToImg!.startsWith('http') ||
+          event.pathToImg!.startsWith('https')) {
+        // Handle network images - convert http to https
+        String imageUrl = event.pathToImg!;
+        if (imageUrl.startsWith('http://')) {
+          imageUrl = imageUrl.replaceFirst('http://', 'https://');
+        }
         return Image.network(
-          event.pathToImg!,
+          imageUrl,
           width: 80,
           height: 80,
           fit: BoxFit.cover,
@@ -414,7 +436,7 @@ class EventCard extends StatelessWidget {
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'Date not specified';
-    
+
     // Format: DD/MM/YYYY
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
@@ -427,11 +449,7 @@ class EventCard extends StatelessWidget {
         color: AppColors.accentAlt.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Icon(
-        Icons.event,
-        color: AppColors.accentAlt,
-        size: 32,
-      ),
+      child: const Icon(Icons.event, color: AppColors.accentAlt, size: 32),
     );
   }
 }

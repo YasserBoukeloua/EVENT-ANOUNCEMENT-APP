@@ -6,11 +6,8 @@ class PhotoCarousel extends StatefulWidget {
   final List<Photo> photos;
   final String baseUrl;
 
-  const PhotoCarousel({
-    Key? key,
-    required this.photos,
-    required this.baseUrl,
-  }) : super(key: key);
+  const PhotoCarousel({Key? key, required this.photos, required this.baseUrl})
+    : super(key: key);
 
   @override
   State<PhotoCarousel> createState() => _PhotoCarouselState();
@@ -52,8 +49,13 @@ class _PhotoCarouselState extends State<PhotoCarousel> {
             itemCount: widget.photos.length,
             itemBuilder: (context, index) {
               final photo = widget.photos[index];
-              final imageUrl = photo.getFullImageUrl(widget.baseUrl);
-              
+              String imageUrl = photo.getFullImageUrl(widget.baseUrl);
+
+              // Convert HTTP to HTTPS for Android security
+              if (imageUrl.startsWith('http://')) {
+                imageUrl = imageUrl.replaceFirst('http://', 'https://');
+              }
+
               return Image.network(
                 imageUrl,
                 width: double.infinity,
@@ -74,16 +76,14 @@ class _PhotoCarouselState extends State<PhotoCarousel> {
                   if (progress == null) return child;
                   return Container(
                     color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: const Center(child: CircularProgressIndicator()),
                   );
                 },
               );
             },
           ),
         ),
-        
+
         // Page Indicator
         if (widget.photos.length > 1)
           Positioned(
@@ -108,7 +108,7 @@ class _PhotoCarouselState extends State<PhotoCarousel> {
               ),
             ),
           ),
-        
+
         // Photo Counter
         if (widget.photos.length > 1)
           Positioned(
@@ -130,7 +130,7 @@ class _PhotoCarouselState extends State<PhotoCarousel> {
               ),
             ),
           ),
-        
+
         // Navigation Arrows (for easier sliding)
         if (widget.photos.length > 1) ...[
           // Left Arrow
@@ -162,7 +162,7 @@ class _PhotoCarouselState extends State<PhotoCarousel> {
                 ),
               ),
             ),
-          
+
           // Right Arrow
           if (_currentPage < widget.photos.length - 1)
             Positioned(

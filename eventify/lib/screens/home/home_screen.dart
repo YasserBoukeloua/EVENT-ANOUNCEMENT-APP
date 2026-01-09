@@ -62,8 +62,13 @@ class _HomeState extends State<Home> {
       );
     } else if (imagePath.startsWith('http://') ||
         imagePath.startsWith('https://')) {
+      // Convert http to https for secure connection
+      String secureUrl = imagePath;
+      if (imagePath.startsWith('http://')) {
+        secureUrl = imagePath.replaceFirst('http://', 'https://');
+      }
       return Image.network(
-        imagePath,
+        secureUrl,
         height: height,
         width: width,
         fit: BoxFit.cover,

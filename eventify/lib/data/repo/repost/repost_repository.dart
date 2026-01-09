@@ -28,6 +28,10 @@ class RepostRepository extends RepostRepositoryBase {
       if (imagePath != null && imagePath.toString().isNotEmpty) {
         if (imagePath.toString().startsWith('http')) {
           photoPath = imagePath.toString();
+          // Convert http to https for secure connection
+          if (photoPath.startsWith('http://')) {
+            photoPath = photoPath.replaceFirst('http://', 'https://');
+          }
         } else {
           photoPath = '${ApiService.baseUrl}$imagePath';
         }

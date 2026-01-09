@@ -14,6 +14,7 @@ import 'package:eventify/screens/post_details/post_details_screen.dart';
 import 'package:eventify/components/top_picks.dart';
 import 'package:eventify/data/repo/comment/comment_repository.dart';
 import 'package:eventify/services/session_service.dart';
+import 'package:eventify/services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:eventify/services/notification_service.dart';
 
@@ -172,10 +173,74 @@ class RepostScreen extends StatelessWidget {
 
   Future<List<Map<String, dynamic>>> _getAllRepostsWithUsers() async {
     try {
-      final dbReposts = DBRepostsTable();
-      return await dbReposts.getAllReposts();
+      final apiService = ApiService();
+      // Fetch posts from the API (posts table has data, reposts table doesn't exist yet)
+      final posts = await apiService.getPosts();
+
+      // Convert API response to the format expected by RepostCard
+      List<Map<String, dynamic>> result = [];
+
+      for (var post in posts) {
+        final user = post['user'];
+        final eventId = post['event'];
+
+        // Fetch event details if we have an event ID
+        Map<String, dynamic>? eventDetails;
+        String? eventPhotoPath;
+
+        if (eventId != null) {
+          try {
+            eventDetails = await apiService.getEvent(eventId);
+            // Get photo URL from event
+            if (eventDetails != null &&
+                eventDetails['photos'] != null &&
+                (eventDetails['photos'] as List).isNotEmpty) {
+              String? imageUrl = eventDetails['photos'][0]['image'];
+              // Convert http to https for secure connection
+              if (imageUrl != null && imageUrl.startsWith('http://')) {
+                imageUrl = imageUrl.replaceFirst('http://', 'https://');
+              }
+              eventPhotoPath = imageUrl;
+            }
+          } catch (e) {
+            print('Error fetching event $eventId: $e');
+          }
+        }
+
+        // Convert user photo URL from http to https
+        String? userPhotoUrl = user?['photo'];
+        if (userPhotoUrl != null && userPhotoUrl.startsWith('http://')) {
+          userPhotoUrl = userPhotoUrl.replaceFirst('http://', 'https://');
+        }
+
+        result.add({
+          'id': post['id'],
+          'event_id': eventId,
+          'event_title': eventDetails?['title'] ?? 'Event Post',
+          'event_description': eventDetails?['description'] ?? post['content'],
+          'event_date': eventDetails?['date'],
+          'event_location': eventDetails?['location'] ?? '',
+          'event_category': 'Post',
+          'event_publisher':
+              eventDetails?['creator']?['username'] ??
+              user?['username'] ??
+              'Publisher',
+          'event_is_free': 1,
+          'event_photo_path': eventPhotoPath,
+          'user_id': user?['id'],
+          'user_username': user?['username'] ?? 'User',
+          'user_name': user?['name'],
+          'user_lastname': user?['lastname'],
+          'user_photo': userPhotoUrl,
+          'caption': post['content'],
+          'created_at': post['created_at'],
+          'num_likes': post['num_likes'] ?? 0,
+        });
+      }
+
+      return result;
     } catch (e) {
-      print('Error getting reposts: $e');
+      print('Error getting posts from API: $e');
       return [];
     }
   }
@@ -255,13 +320,10 @@ class _RepostCardState extends State<RepostCard> {
       if (_isLiked) {
         // Trigger notification
         final profileState = context.read<ProfileCubit>().state;
-        final userName = profileState.user?.name ?? profileState.user?.username ?? 'Someone';
-        
-        await NotificationService().notifyLike(
-          repostId,
-          userId,
-          userName,
-        );
+        final userName =
+            profileState.user?.name ?? profileState.user?.username ?? 'Someone';
+
+        await NotificationService().notifyLike(repostId, userId, userName);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -560,12 +622,11 @@ class _RepostCardState extends State<RepostCard> {
                         height: 60,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          image: DecorationImage(
-                            image: (eventImage.startsWith('lib/assets'))
-                                ? AssetImage(eventImage) as ImageProvider
-                                : FileImage(File(eventImage)),
-                            fit: BoxFit.cover,
-                          ),
+                          color: Colors.grey[300],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: _buildEventImage(eventImage),
                         ),
                       ),
 
@@ -745,8 +806,8 @@ class _RepostCardState extends State<RepostCard> {
         final eventId = widget.repostData['event_id'];
 
         if (userId != null && eventId != null) {
-          final dbReposts = DBRepostsTable();
-          await dbReposts.removeRepost(userId, eventId);
+          final apiService = ApiService();
+          await apiService.removeRepost(userId, eventId);
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -771,6 +832,19 @@ class _RepostCardState extends State<RepostCard> {
 
   Widget _buildUserAvatar(String? userPhoto, String displayName) {
     if (userPhoto != null && userPhoto.isNotEmpty) {
+      // Check if it's a network URL
+      if (userPhoto.startsWith('http')) {
+        // Convert http to https for secure connection
+        String secureUrl = userPhoto;
+        if (userPhoto.startsWith('http://')) {
+          secureUrl = userPhoto.replaceFirst('http://', 'https://');
+        }
+        return CircleAvatar(
+          radius: 20,
+          backgroundImage: NetworkImage(secureUrl),
+          backgroundColor: AppColors.primaryDark,
+        );
+      }
       return CircleAvatar(
         radius: 20,
         backgroundImage: AssetImage(userPhoto),
@@ -789,6 +863,79 @@ class _RepostCardState extends State<RepostCard> {
         ),
       );
     }
+  }
+
+  Widget _buildEventImage(String? eventImage) {
+    if (eventImage == null || eventImage.isEmpty) {
+      return Container(
+        color: Colors.grey[300],
+        child: const Icon(Icons.event, color: Colors.grey, size: 30),
+      );
+    }
+
+    // Network image (from API)
+    if (eventImage.startsWith('http')) {
+      // Convert http to https for secure connection
+      String secureUrl = eventImage;
+      if (eventImage.startsWith('http://')) {
+        secureUrl = eventImage.replaceFirst('http://', 'https://');
+      }
+      return Image.network(
+        secureUrl,
+        fit: BoxFit.cover,
+        width: 60,
+        height: 60,
+        errorBuilder: (context, error, stackTrace) {
+          print('Error loading image: $error');
+          return Container(
+            color: Colors.grey[300],
+            child: const Icon(Icons.event, color: Colors.grey, size: 30),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                  : null,
+              strokeWidth: 2,
+            ),
+          );
+        },
+      );
+    }
+
+    // Local asset
+    if (eventImage.startsWith('lib/assets')) {
+      return Image.asset(
+        eventImage,
+        fit: BoxFit.cover,
+        width: 60,
+        height: 60,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[300],
+            child: const Icon(Icons.event, color: Colors.grey, size: 30),
+          );
+        },
+      );
+    }
+
+    // Local file
+    return Image.file(
+      File(eventImage),
+      fit: BoxFit.cover,
+      width: 60,
+      height: 60,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: Colors.grey[300],
+          child: const Icon(Icons.event, color: Colors.grey, size: 30),
+        );
+      },
+    );
   }
 
   String _calculateTimeAgo(DateTime repostDate) {

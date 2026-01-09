@@ -86,8 +86,13 @@ class _PostDetailsState extends State<PostDetails> {
       );
     } else if (imagePath.startsWith('http://') ||
         imagePath.startsWith('https://')) {
+      // Convert http to https for secure connection
+      String secureUrl = imagePath;
+      if (imagePath.startsWith('http://')) {
+        secureUrl = imagePath.replaceFirst('http://', 'https://');
+      }
       return Image.network(
-        imagePath,
+        secureUrl,
         fit: BoxFit.cover,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
@@ -144,8 +149,13 @@ class _PostDetailsState extends State<PostDetails> {
       );
     } else if (imagePath.startsWith('http://') ||
         imagePath.startsWith('https://')) {
+      // Convert HTTP to HTTPS for Android security
+      String secureUrl = imagePath;
+      if (imagePath.startsWith('http://')) {
+        secureUrl = imagePath.replaceFirst('http://', 'https://');
+      }
       return Image.network(
-        imagePath,
+        secureUrl,
         width: 80,
         height: 80,
         fit: BoxFit.cover,
@@ -839,8 +849,13 @@ class _CreateRepostScreenState extends State<CreateRepostScreen> {
       );
     } else if (imagePath.startsWith('http://') ||
         imagePath.startsWith('https://')) {
+      // Convert HTTP to HTTPS for Android security
+      String secureUrl = imagePath;
+      if (imagePath.startsWith('http://')) {
+        secureUrl = imagePath.replaceFirst('http://', 'https://');
+      }
       return Image.network(
-        imagePath,
+        secureUrl,
         width: 80,
         height: 80,
         fit: BoxFit.cover,
