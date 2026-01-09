@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Change this to your Django backend URL
-  static const String baseUrl = 'http://127.0.0.1:8000'; // For Android emulator
+  // Production API URL
+  static const String baseUrl = 'https://event-anouncement-app-production.up.railway.app';
 
 
   // GET request helper
