@@ -75,11 +75,11 @@ def getEvent(request, pk):
 def createEvent(request):
     data = request.data
     try:
-        # Get creator - use request.user if authenticated, otherwise use creator ID from data
-        if request.user.is_authenticated:
-            creator = request.user
-        elif 'creator' in data:
+        # Get creator from data (required field)
+        if 'creator' in data:
             creator = User.objects.get(id=data['creator'])
+        elif 'creator_id' in data:
+            creator = User.objects.get(id=data['creator_id'])
         else:
             return Response({'error': 'Creator is required'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -231,11 +231,11 @@ def getPost(request, pk):
 def createPost(request):
     data = request.data
     try:
-        # Get user - use request.user if authenticated, otherwise use user_id from data
-        if request.user.is_authenticated:
-            user = request.user
-        elif 'user_id' in data:
+        # Get user from user_id in data (required field)
+        if 'user_id' in data:
             user = User.objects.get(id=data['user_id'])
+        elif 'user' in data:
+            user = User.objects.get(id=data['user'])
         else:
             return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
         
