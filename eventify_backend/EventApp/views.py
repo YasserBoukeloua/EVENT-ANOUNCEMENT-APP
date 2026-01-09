@@ -231,13 +231,23 @@ def getPost(request, pk):
 def createPost(request):
     data = request.data
     try:
+        # Get user - use request.user if authenticated, otherwise use user_id from data
+        if request.user.is_authenticated:
+            user = request.user
+        elif 'user_id' in data:
+            user = User.objects.get(id=data['user_id'])
+        else:
+            return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
         post = Post.objects.create(
-            user=request.user,
+            user=user,
             event_id=data.get('event_id', None),
             content=data['content']
         )
         serializer = PostSerializer(post, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
     except KeyError as e:
         return Response({'error': f'Missing required field: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
