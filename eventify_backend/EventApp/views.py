@@ -363,15 +363,23 @@ def deleteComment(request, pk):
 
 @api_view(['GET'])
 def getFavorites(request):
-    favorites = EventFavorite.objects.filter(user=request.user).order_by('-saved_at')
-    serializer = EventFavoriteSerializer(favorites, many=True)
+    """Get all favorites"""
+    favorites = EventFavorite.objects.all().order_by('-saved_at')
+    serializer = EventFavoriteSerializer(favorites, many=True, context={'request': request})
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def getFavoritesByUser(request, user_id):
+    """Get favorites by user"""
+    favorites = EventFavorite.objects.filter(user_id=user_id).order_by('-saved_at')
+    serializer = EventFavoriteSerializer(favorites, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['GET'])
 def getFavorite(request, pk):
     try:
         favorite = EventFavorite.objects.get(id=pk)
-        serializer = EventFavoriteSerializer(favorite, many=False)
+        serializer = EventFavoriteSerializer(favorite, many=False, context={'request': request})
         return Response(serializer.data)
     except EventFavorite.DoesNotExist:
         return Response({'error': 'Favorite not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -379,22 +387,32 @@ def getFavorite(request, pk):
 
 @api_view(['POST'])
 def createFavorite(request):
-    data = request.data
+    """Create a favorite"""
     try:
-
-        if EventFavorite.objects.filter(user=request.user, event_id=data['event_id']).exists():
+        data = request.data
+        user_id = data.get('user_id')
+        event_id = data.get('event_id')
+        
+        if not user_id or not event_id:
+            return Response({'error': 'user_id and event_id are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already favorited
+        if EventFavorite.objects.filter(user_id=user_id, event_id=event_id).exists():
             return Response({'error': 'Event already in favorites'}, status=status.HTTP_400_BAD_REQUEST)
         
+        user = User.objects.get(id=user_id)
+        event = Event.objects.get(id=event_id)
+        
         favorite = EventFavorite.objects.create(
-            user=request.user,
-            event_id=data['event_id']
+            user=user,
+            event=event
         )
-        serializer = EventFavoriteSerializer(favorite, many=False)
-        if serializer.is_valid():
-            serializer.save()
+        serializer = EventFavoriteSerializer(favorite, many=False, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    except KeyError as e:
-        return Response({'error': f'Missing required field: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Event.DoesNotExist:
+        return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -402,14 +420,26 @@ def createFavorite(request):
 def deleteFavorite(request, pk):
     try:
         favorite = EventFavorite.objects.get(id=pk)
-        
-        if favorite.user != request.user:
-            return Response({'error': 'You can only delete your own favorites'}, status=status.HTTP_403_FORBIDDEN)
-        
         favorite.delete()
         return Response({'message': 'Favorite removed successfully'}, status=status.HTTP_204_NO_CONTENT)
     except EventFavorite.DoesNotExist:
         return Response({'error': 'Favorite not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+def removeFavoriteByUserEvent(request, user_id, event_id):
+    """Remove favorite by user and event"""
+    try:
+        favorite = EventFavorite.objects.get(user_id=user_id, event_id=event_id)
+        favorite.delete()
+        return Response({'message': 'Favorite removed successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except EventFavorite.DoesNotExist:
+        return Response({'error': 'Favorite not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def hasFavorited(request, user_id, event_id):
+    """Check if user has favorited an event"""
+    exists = EventFavorite.objects.filter(user_id=user_id, event_id=event_id).exists()
+    return Response({'favorited': exists})
 
 
 #Photos Views

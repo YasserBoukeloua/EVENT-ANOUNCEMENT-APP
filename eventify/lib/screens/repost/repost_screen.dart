@@ -174,37 +174,27 @@ class RepostScreen extends StatelessWidget {
   Future<List<Map<String, dynamic>>> _getAllRepostsWithUsers() async {
     try {
       final apiService = ApiService();
-      // Fetch posts from the API (posts table has data, reposts table doesn't exist yet)
-      final posts = await apiService.getPosts();
+      // Fetch reposts from the API
+      final reposts = await apiService.getReposts();
 
       // Convert API response to the format expected by RepostCard
       List<Map<String, dynamic>> result = [];
 
-      for (var post in posts) {
-        final user = post['user'];
-        final eventId = post['event'];
+      for (var repost in reposts) {
+        final user = repost['user'];
+        final event = repost['event'];
 
-        // Fetch event details if we have an event ID
-        Map<String, dynamic>? eventDetails;
+        // Get photo URL from event
         String? eventPhotoPath;
-
-        if (eventId != null) {
-          try {
-            eventDetails = await apiService.getEvent(eventId);
-            // Get photo URL from event
-            if (eventDetails != null &&
-                eventDetails['photos'] != null &&
-                (eventDetails['photos'] as List).isNotEmpty) {
-              String? imageUrl = eventDetails['photos'][0]['image'];
-              // Convert http to https for secure connection
-              if (imageUrl != null && imageUrl.startsWith('http://')) {
-                imageUrl = imageUrl.replaceFirst('http://', 'https://');
-              }
-              eventPhotoPath = imageUrl;
-            }
-          } catch (e) {
-            print('Error fetching event $eventId: $e');
+        if (event != null &&
+            event['photos'] != null &&
+            (event['photos'] as List).isNotEmpty) {
+          String? imageUrl = event['photos'][0]['image'];
+          // Convert http to https for secure connection
+          if (imageUrl != null && imageUrl.startsWith('http://')) {
+            imageUrl = imageUrl.replaceFirst('http://', 'https://');
           }
+          eventPhotoPath = imageUrl;
         }
 
         // Convert user photo URL from http to https
@@ -214,17 +204,14 @@ class RepostScreen extends StatelessWidget {
         }
 
         result.add({
-          'id': post['id'],
-          'event_id': eventId,
-          'event_title': eventDetails?['title'] ?? 'Event Post',
-          'event_description': eventDetails?['description'] ?? post['content'],
-          'event_date': eventDetails?['date'],
-          'event_location': eventDetails?['location'] ?? '',
-          'event_category': 'Post',
-          'event_publisher':
-              eventDetails?['creator']?['username'] ??
-              user?['username'] ??
-              'Publisher',
+          'id': repost['id'],
+          'event_id': event?['id'],
+          'event_title': event?['title'] ?? 'Unknown Event',
+          'event_description': event?['description'] ?? '',
+          'event_date': event?['date'],
+          'event_location': event?['location'] ?? '',
+          'event_category': 'Repost',
+          'event_publisher': event?['creator']?['username'] ?? 'Publisher',
           'event_is_free': 1,
           'event_photo_path': eventPhotoPath,
           'user_id': user?['id'],
@@ -232,15 +219,15 @@ class RepostScreen extends StatelessWidget {
           'user_name': user?['name'],
           'user_lastname': user?['lastname'],
           'user_photo': userPhotoUrl,
-          'caption': post['content'],
-          'created_at': post['created_at'],
-          'num_likes': post['num_likes'] ?? 0,
+          'caption': repost['caption'] ?? '',
+          'created_at': repost['created_at'],
+          'num_likes': 0,
         });
       }
 
       return result;
     } catch (e) {
-      print('Error getting posts from API: $e');
+      print('Error getting reposts from API: $e');
       return [];
     }
   }

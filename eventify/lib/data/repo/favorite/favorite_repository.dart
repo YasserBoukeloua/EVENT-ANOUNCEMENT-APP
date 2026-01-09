@@ -1,42 +1,57 @@
 import 'package:eventify/components/top_picks.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:eventify/data/databases/db_favorites.dart';
-import 'package:eventify/data/databases/db_events.dart';
-import 'package:eventify/data/databases/dbhelper.dart';
+import 'package:eventify/services/api_service.dart';
 import 'favorite_repo_abstract.dart';
 
 class FavoriteRepository extends FavoriteRepositoryBase {
-  final _dbFavorites = DBFavoritesTable();
-  final _dbEvents = DBEventsTable();
+  final _apiService = ApiService();
 
-  // Convert database record to TopPicks model
-  TopPicks _convertToTopPicks(Map<String, dynamic> record) {
+  // Convert API record to TopPicks model
+  TopPicks _convertToTopPicks(Map<String, dynamic> favorite) {
+    final event = favorite['event'];
+    if (event == null) {
+      return TopPicks(
+        favorite['id'],
+        null,
+        'Unknown Event',
+        null,
+        '',
+        'Unknown',
+        true,
+        'General',
+      );
+    }
+
+    // Get photo URL from event
+    String? photoPath;
+    if (event['photos'] != null && (event['photos'] as List).isNotEmpty) {
+      String? imageUrl = event['photos'][0]['image'];
+      if (imageUrl != null && imageUrl.startsWith('http://')) {
+        imageUrl = imageUrl.replaceFirst('http://', 'https://');
+      }
+      photoPath = imageUrl;
+    }
+
     return TopPicks(
-      record['id'],
-      record['date'] != null ? DateTime.parse(record['date']) : null,
-      record['title'],
-      record['photo_path'],
-      record['location'],
-      record['publisher'],
-      record['is_free'] == 1,
-      record['category'],
+      event['id'],
+      event['date'] != null ? DateTime.parse(event['date']) : null,
+      event['title'],
+      photoPath,
+      event['location'],
+      event['creator']?['username'] ?? 'Unknown',
+      true,
+      'General',
+      description: event['description'],
+      registrationLink: event['registration_link'],
     );
   }
 
   @override
   Future<List<TopPicks>> getFavorites(int userId) async {
     try {
-      final database = await DBHelper.getDatabase();
-      
-      // Join favorites with events to get event details
-      final results = await database.rawQuery('''
-        SELECT e.* FROM events e
-        INNER JOIN favorites f ON e.id = f.event_id
-        WHERE f.user_id = ?
-        ORDER BY f.saved_at DESC
-      ''', [userId]);
-
-      return results.map((record) => _convertToTopPicks(record)).toList();
+      final favorites = await _apiService.getFavoritesByUser(userId);
+      return favorites
+          .map((f) => _convertToTopPicks(f as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       print('Get favorites error: $e');
       return [];
@@ -46,11 +61,8 @@ class FavoriteRepository extends FavoriteRepositoryBase {
   @override
   Future<bool> addFavorite(int userId, int eventId) async {
     try {
-      return await _dbFavorites.insertRecord({
-        'user_id': userId,
-        'event_id': eventId,
-        'saved_at': DateTime.now().toIso8601String(),
-      });
+      await _apiService.createFavorite(userId, eventId);
+      return true;
     } catch (e) {
       print('Add favorite error: $e');
       return false;
@@ -60,15 +72,7 @@ class FavoriteRepository extends FavoriteRepositoryBase {
   @override
   Future<bool> removeFavorite(int userId, int eventId) async {
     try {
-      final database = await DBHelper.getDatabase();
-      
-      await database.delete(
-        'favorites',
-        where: 'user_id = ? AND event_id = ?',
-        whereArgs: [userId, eventId],
-      );
-      
-      return true;
+      return await _apiService.removeFavorite(userId, eventId);
     } catch (e) {
       print('Remove favorite error: $e');
       return false;
@@ -78,15 +82,7 @@ class FavoriteRepository extends FavoriteRepositoryBase {
   @override
   Future<bool> isFavorite(int userId, int eventId) async {
     try {
-      final database = await DBHelper.getDatabase();
-      
-      final results = await database.query(
-        'favorites',
-        where: 'user_id = ? AND event_id = ?',
-        whereArgs: [userId, eventId],
-      );
-
-      return results.isNotEmpty;
+      return await _apiService.hasFavorited(userId, eventId);
     } catch (e) {
       print('Check favorite error: $e');
       return false;

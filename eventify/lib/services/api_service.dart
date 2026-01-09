@@ -162,12 +162,28 @@ class ApiService {
     return await get('/favorites/');
   }
 
-  Future<dynamic> createFavorite(int eventId) async {
-    return await post('/favorites/create/', {'event_id': eventId});
+  Future<List<dynamic>> getFavoritesByUser(int userId) async {
+    return await get('/favorites/user/$userId/');
+  }
+
+  Future<dynamic> createFavorite(int userId, int eventId) async {
+    return await post('/favorites/create/', {
+      'user_id': userId,
+      'event_id': eventId,
+    });
   }
 
   Future<bool> deleteFavorite(int id) async {
     return await delete('/favorites/$id/delete/');
+  }
+
+  Future<bool> removeFavorite(int userId, int eventId) async {
+    return await delete('/favorites/remove/$userId/$eventId/');
+  }
+
+  Future<bool> hasFavorited(int userId, int eventId) async {
+    final response = await get('/favorites/check/$userId/$eventId/');
+    return response['favorited'] ?? false;
   }
 
   // ========== PHOTO ENDPOINTS ==========
